@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VNTravelAgency | 越南旅行代理</title>
+
+  <!-- Analytics (保留原設定，可視需要調整) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8761681KL5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);} 
+    gtag('js', new Date());
+    gtag('config', 'G-8761681KL5');
+  </script>
+
+  <!-- Tailwind & Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tmGreen: '#9EBC9F',   // 主視覺綠
+            tmOrange: '#FFB703',  // 強調橘
+            tmDeepGreen: '#2D4F32',
+          },
+          borderRadius: {
+            '3xl': '1.75rem',
+            '4xl': '2.5rem',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- 全站字型 & 基本樣式 -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700;900&display=swap');
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans TC', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      scroll-behavior: smooth;
+      background-color: #f9fafb;
+      color: #111827;
+    }
+    .fade-in { animation: fadeIn 0.28s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
+    .zoom-cursor { cursor: zoom-in; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #9EBC9F; border-radius: 10px; }
+    .lang-zh { display: inline; }
+    .lang-en { display: none; }
+    html[data-lang="en"] .lang-zh { display: none; }
+    html[data-lang="en"] .lang-en { display: inline; }
+  </style>
+
+  <!-- 互動邏輯：Modal、報價計算、行程選擇等 -->
+  <script>
+    // 通用 Modal 切換
+    function toggleModal(id) {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      const isHidden = modal.classList.contains('hidden');
+      if (isHidden) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+      } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      }
+    }
+
+    // Hero：打開 Google 表單預約
+    function startBooking() {
+      const targetUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSK0ubv5qcKK79RmLjRoxIW3WeQHxxKbiYW6ppnaa8FhAhPw/viewform?embedded=true';
+      const iframe = document.getElementById('form-iframe');
+      if (iframe && iframe.src !== targetUrl) iframe.src = targetUrl;
+      toggleModal('modal-form');
+    }
+
+    // 圖片放大
+    function openImageModal(src) {
+      const modal = document.getElementById('modal-image');
+      const fullImg = document.getElementById('full-res-image');
+      if (!modal || !fullImg) return;
+      fullImg.src = src;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // 簡易預算試算（保留原邏輯）
+    function updateEstimate() {
+      const pax = parseInt(document.getElementById('calc-pax').value) || 0;
+      const days = parseInt(document.getElementById('calc-days').value) || 0;
+      const hotelRate = parseInt(document.getElementById('calc-hotel').value) || 0;
+
+      if (pax <= 0 || days <= 0) {
+        document.getElementById('calc-result-box').classList.add('opacity-20');
+        document.getElementById('res-amount').innerText = '0';
+        return;
+      }
+
+      let carPrice = 0;
+      let carName = '';
+      if (pax <= 4) { carPrice = 1400000; carName = '一般 7 人座'; }
+      else if (pax <= 7) { carPrice = 1900000; carName = '10 人保姆車'; }
+      else if (pax <= 9) { carPrice = 2500000; carName = '12 人保姆車'; }
+      else if (pax <= 16) { carPrice = 2200000; carName = '18 人座中巴'; }
+      else { carPrice = 5500000; carName = '29–45 人大巴士'; }
+
+      let ticketTotal = 0;
+      if (document.getElementById('t-vin').checked) ticketTotal += 1500000;
+      if (document.getElementById('t-cable').checked) ticketTotal += 850000;
+      if (document.getElementById('t-kiss').checked) ticketTotal += 750000;
+
+      let extra = 0;
+      if (document.getElementById('e-starfish').checked) extra += 300000;
+
+      let hotelTotal = 0;
+      if (hotelRate > 0 && days > 1) {
+        const rooms = Math.ceil(pax / 2);
+        const nights = days - 1;
+        hotelTotal = rooms * nights * hotelRate;
+      }
+
+      const base = (carPrice * days) + (ticketTotal * pax) + extra + hotelTotal;
+      const rangeMax = Math.ceil((base * 1.25) / 10000) * 10000;
+
+      document.getElementById('res-car').innerText = carName;
+      document.getElementById('res-amount').innerText = `${base.toLocaleString()} ~ ${rangeMax.toLocaleString()}`;
+      document.getElementById('calc-result-box').classList.remove('opacity-20');
+    }
+
+    // 語系切換：zh / en
+    let currentLang = 'zh';
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.documentElement.setAttribute('data-lang', lang);
+    }
+
+    function toggleLang() {
+      setLang(currentLang === 'zh' ? 'en' : 'zh');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setLang('zh');
+    });
+
+    // 自動報價系統：確認彈窗 → 系統 iframe
+    function openQuoteSystem() {
+      // 關閉確認彈窗
+      const confirmModal = document.getElementById('modal-quote-confirm');
+      if (confirmModal) {
+        confirmModal.classList.add('hidden');
+        confirmModal.classList.remove('flex');
+      }
+      // 開啟報價系統彈窗
+      const systemModal = document.getElementById('modal-quote-system');
+      if (systemModal) {
+        systemModal.classList.remove('hidden');
+        systemModal.classList.add('flex');
+        // 首次打開才載入 iframe（避免重複刷新）
+        const iframe = document.getElementById('quote-system-iframe');
+        if (iframe) {
+          const target = iframe.getAttribute('data-src');
+          if (target && iframe.src !== target) {
+            iframe.src = target;
+          }
+        }
+      }
+      document.body.style.overflow = 'hidden';
+    }
+
+    // ESC 關閉主要 Modal
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      const modals = [
+        'modal-about','modal-itinerary','modal-choice','modal-form',
+        'modal-faq-all','modal-image','modal-quote-confirm','modal-quote-system',
+        'modal-book-confirm',
+        'modal-region-selector','modal-region-intro','modal-contact-list','modal-addon-services'
+      ];
+      modals.forEach(id => {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+      });
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    });
+
+    // 地區行程資料（保留原雙語文案 & 聲明）
+    const regionData = {
+      'phu-quoc': {
+        titleZh: '富國島自由行 / 包車客製 3–5 天 依需求報價',
+        titleEn: 'Phu Quoc custom free trip / private car · 3–5 days · quote on request',
+        desc: '<p class="text-slate-600 leading-relaxed mb-4"><span class="lang-zh">以富國島為核心，依照<span class="lang-zh">天數</span><span class="lang-en">Days</span>與成員組成設計：可搭配<span class="lang-zh">跨海纜車</span><span class="lang-en">Sea-crossing cable car</span>、<span class="lang-zh">珍珠樂園</span><span class="lang-en">VinWonders theme park</span>、跳島浮潛與北島海星沙灘。適合親子、好友小團與家庭旅行。</span><span class="lang-en">Center your trip on Phu Quoc and design around your days and travel party – combine the sea cable car, VinWonders, island-hopping and Starfish Beach. Ideal for families and small private groups.</span></p>' + getFullDisclaimer(),
+        tags: ['<span class="lang-zh">跨海纜車</span><span class="lang-en">Sea-crossing cable car</span>&<span class="lang-zh">日落小鎮</span><span class="lang-en">Sunset Town</span>', '跳島浮潛 & 海星沙灘', '台灣&專業中文導遊 + 專業司機'],
+        image: 'images/phuquoc-cover.jpg'
+      },
+      'hanoi': {
+        titleZh: '北越精選：河內 & 沙壩 5 天 4 夜',
+        titleEn: 'Northern Viet Nam highlights: Hanoi & Sapa · 5D4N',
+        desc: '<div class="text-slate-600 leading-relaxed space-y-3 mb-6 border-l-4 border-tmGreen/20 pl-5">' +
+              '<span class="font-bold text-tmDeepGreen block mb-2 text-xl tracking-tight"><span class="lang-zh">【深度北越 · 經典巡禮】</span><span class="lang-en">[Northern Viet Nam · Classic highlights]</span></span>' +
+              '● <span class="lang-zh">走訪千年文廟與火車街，感受河內老城魅力與夜生活。</span><span class="lang-en">Visit the thousand-year Temple of Literature and Train Street to feel Hanoi\'s old-town charm and nightlife.</span><br>' +
+              '● <span class="lang-zh">雲端山城沙壩，深入貓貓村體驗少數民族純樸日常。</span><span class="lang-en">Head up to the mountain town of Sapa and explore Cat Cat Village for a glimpse of ethnic minority life.</span><br>' +
+              '● <span class="lang-zh">搭乘番西邦纜車登上中南半島之巔，俯瞰雲海山巒。</span><span class="lang-en">Ride the Fansipan cable car to the highest peak in the region and look out over a sea of clouds.</span><br>' +
+              '● <span class="lang-zh">世界遺產下龍灣遊船，走進海上石灰岩奇景。</span><span class="lang-en">Cruise UNESCO-listed Ha Long Bay among dramatic limestone karsts.</span><br>' +
+              '● <span class="lang-zh">河內悠閒早晨 & 專車送機，行程節奏不趕路。</span><span class="lang-en">Enjoy a relaxed morning in Hanoi and a private transfer to the airport – no rushed schedule.</span></div>' +
+              getFullDisclaimer(),
+        tags: ['下龍灣遊船', '沙壩雲端山城', '番西邦纜車'],
+        image: 'images/hanoi-cover.jpg'
+      },
+      'danang': {
+        titleZh: '中越黃金組合：峴港・會安・巴拿山 5 天 4 夜',
+        titleEn: 'Central Viet Nam combo: Da Nang, Hoi An & Ba Na Hills · 5D4N',
+        desc: '<div class="text-slate-600 leading-relaxed space-y-3 mb-6 border-l-4 border-tmOrange/20 pl-5">' +
+              '<span class="font-bold text-tmDeepGreen block mb-2 text-xl tracking-tight"><span class="lang-zh">【世界遺產 & 山海奇觀】</span><span class="lang-en">[World heritage & coastal mountains]</span></span>' +
+              '● <span class="lang-zh">巴拿山雲端樂園，走在黃金佛手橋上俯瞰山谷雲海。</span><span class="lang-en">Visit Ba Na Hills and walk across the Golden Bridge above valleys and cloud seas.</span><br>' +
+              '● <span class="lang-zh">會安古鎮燈籠夜色，順化皇城感受末代王朝氣息。</span><span class="lang-en">Stroll lantern-lit Hoi An Ancient Town and feel the history of the last dynasty in Hue Imperial City.</span><br>' +
+              '● <span class="lang-zh">五行山洞窟與山茶半島海景，一次收集山海景觀。</span><span class="lang-en">Explore Marble Mountains\' caves and Son Tra Peninsula\'s sea views for both mountain and ocean scenery.</span><br>' +
+              '● <span class="lang-zh">品嚐中越料理、會安小吃與峴港海鮮。</span><span class="lang-en">Taste central Vietnamese dishes, Hoi An snacks and Da Nang seafood.</span></div>' +
+              getFullDisclaimer(),
+        tags: ['黃金佛手橋', '會安古鎮燈籠', '五行山探險'],
+        image: 'images/danang-cover.jpg'
+      },
+      'saigon': {
+        titleZh: '南越三城：胡志明・美奈沙漠・大叻山城 5 天 4 夜',
+        titleEn: 'Southern Viet Nam trio: Saigon, Mui Ne & Da Lat · 5D4N',
+        desc: '<div class="text-slate-600 leading-relaxed space-y-3 mb-6 border-l-4 border-tmDeepGreen/20 pl-5">' +
+              '<span class="font-bold text-tmDeepGreen block mb-2 text-xl tracking-tight"><span class="lang-zh">【沙漠與高地的雙重風景】</span><span class="lang-en">[Desert dunes & highland charm]</span></span>' +
+              '● <span class="lang-zh">美奈紅白沙丘日出、仙女溪地形奇景與海邊漁村。</span><span class="lang-en">Catch sunrise over Mui Ne\'s red and white sand dunes, explore Fairy Stream and coastal fishing villages.</span><br>' +
+              '● <span class="lang-zh">海拔 1500m 大叻避暑山城：瘋狂屋、茶園、瀑布與花園。</span><span class="lang-en">Head up to Da Lat at 1,500m for cool weather, Crazy House, tea plantations, waterfalls and gardens.</span><br>' +
+              '● <span class="lang-zh">探訪靈福寺、粘土隧道等在地特色景點。</span><span class="lang-en">Visit unique local spots such as Linh Phuoc Pagoda and the Clay Tunnel.</span><br>' +
+              '● <span class="lang-zh">胡志明市區自由活動，咖啡館巡禮 & 夜生活體驗。</span><span class="lang-en">Enjoy free time in Ho Chi Minh City for cafe-hopping and nightlife.</span></div>' +
+              getFullDisclaimer(),
+        tags: ['美奈紅白沙丘', '大叻法式山城', '胡志明自由行'],
+        image: 'images/muine-dalat.jpg'
+      }
+    };
+
+    function getFullDisclaimer() {
+      return '<div class="bg-blue-50 border-2 border-blue-100 rounded-3xl p-5 md:p-6 shadow-inner mt-2 mb-1">' +
+             '<p class="text-blue-800 font-black text-base md:text-lg mb-2 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> 旅遊行程推薦聲明</p>' +
+             '<p class="text-slate-700 text-[13px] md:text-[14px] leading-relaxed mb-3">Tamarind 旅遊諮詢：我們專注越南在地資源的篩選與推薦，為您對接專業在地團隊。套裝行程由當地合作夥伴負責實際操作與照顧，我們則協助您把需求翻譯成適合的行程設計與溝通橋樑。</p>' +
+             '<div class="border-t border-blue-200 my-3"></div>' +
+             '<p class="text-blue-800 font-black text-[13px] mb-1">Travel Recommendation Notice</p>' +
+             '<p class="text-slate-700 text-[12px] opacity-80 leading-relaxed">Tamarind Travel focuses on curating and recommending reliable local partners in Vietnam. All packages are executed by on-site operators, while we act as your consultant to align expectations, design routes, and support communication.</p>' +
+             '</div>';
+    }
+
+    // 開啟地區詳情
+    function showRegionIntro(regionKey) {
+      const data = regionData[regionKey];
+      if (!data) return;
+      document.getElementById('intro-title').innerText = currentLang === 'en' ? (data.titleEn || data.titleZh) : data.titleZh;
+      document.getElementById('intro-desc').innerHTML = data.desc;
+      document.getElementById('intro-img').src = data.image;
+      const tagsBox = document.getElementById('intro-tags');
+      tagsBox.innerHTML = data.tags.map(tag => (
+        `<span class="bg-tmOrange/10 text-tmOrange text-[11px] font-bold px-3 py-1.5 rounded-full border border-tmOrange/20">${tag}</span>`
+      )).join('');
+      // 富國島不顯示「聯繫專員」按鈕
+      const contactFooter = document.getElementById('intro-contact-footer');
+      if (contactFooter) contactFooter.style.display = regionKey === 'phu-quoc' ? 'none' : '';
+      toggleModal('modal-region-selector');
+      setTimeout(() => { toggleModal('modal-region-intro'); }, 260);
+    }
+
+    function goContact() {
+      toggleModal('modal-region-intro');
+      setTimeout(() => { toggleModal('modal-contact-list'); }, 260);
+    }
+
+    function copyAndNotify(id, name) {
+      navigator.clipboard.writeText(id).then(() => {
+        alert('已複製 ' + name + ' ID：' + id + '\n請到 WeChat 貼上搜尋聯繫。');
+      }).catch(() => {
+        alert('請手動於 WeChat 搜尋 ' + name + ' ID：' + id);
+      });
+    }
+  </script>
+</head>
+<body>
+  <!-- 固定導覽列：標準旅行社 IA -->
+  <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm border-b border-tmOrange/30">
+    <div class="max-w-7xl mx-auto flex items-center justify-between px-4 md:px-6 py-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-2xl bg-tmDeepGreen text-white flex items-center justify-center text-sm font-black tracking-tight">VTS</div>
+        <div class="leading-tight">
+          <div class="text-sm font-black tracking-[0.16em] uppercase text-tmDeepGreen">VN Travel Studio</div>
+          <div class="text-[11px] text-slate-500"><span class="lang-zh">富國島客製規劃 ＆ 越南全區中文地接窗口</span><span class="lang-en">Vietnam &amp; Phu Quoc travel specialist</span></div>
+        </div>
+      </div>
+      <div class="hidden md:flex items-center gap-7 text-sm font-bold text-slate-700">
+        <button onclick="toggleLang()" class="text-xs px-3 py-1 rounded-full border border-slate-200 hover:border-tmOrange hover:text-tmOrange transition">中 / EN</button>
+        <a href="#tours" class="hover:text-tmOrange transition"><span class="lang-zh">行程方案</span><span class="lang-en">Tours</span></a>
+        <button onclick="toggleModal('modal-addon-services')" class="hover:text-tmOrange transition"><span class="lang-zh">服務項目</span><span class="lang-en">Services</span></button>
+        <a href="#process" class="hover:text-tmOrange transition"><span class="lang-zh">預約流程</span><span class="lang-en">Booking flow</span></a>
+        <a href="#faq" class="hover:text-tmOrange transition"><span class="lang-zh">常見問題</span><span class="lang-en">FAQ</span></a>
+        <button onclick="toggleModal('modal-book-confirm')" class="bg-tmOrange text-white px-5 py-2 rounded-full shadow-sm hover:shadow-md hover:-translate-y-[1px] transition text-xs tracking-[0.15em] uppercase"><span class="lang-zh">立即預約</span><span class="lang-en">Book now</span></button>
+      </div>
+      <button class="md:hidden text-slate-600" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+        <i class="fa-solid fa-bars text-xl"></i>
+      </button>
+    </div>
+    <div id="mobile-menu" class="md:hidden hidden border-t border-slate-100 bg-white/98">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-3 text-sm font-bold">
+        <button onclick="toggleLang()" class="self-start text-xs px-3 py-1 rounded-full border border-slate-200 hover:border-tmOrange hover:text-tmOrange transition">中 / EN</button>
+        <a href="#tours" class="py-1" onclick="this.closest('#mobile-menu').classList.add('hidden')"><span class="lang-zh">行程方案</span><span class="lang-en">Tours</span></a>
+        <button onclick="toggleModal('modal-addon-services'); document.getElementById('mobile-menu').classList.add('hidden');" class="py-1 text-left font-bold text-slate-700"><span class="lang-zh">服務項目</span><span class="lang-en">Services</span></button>
+        <a href="#process" class="py-1" onclick="this.closest('#mobile-menu').classList.add('hidden')"><span class="lang-zh">預約流程</span><span class="lang-en">Booking flow</span></a>
+        <a href="#faq" class="py-1" onclick="this.closest('#mobile-menu').classList.add('hidden')"><span class="lang-zh">常見問題</span><span class="lang-en">FAQ</span></a>
+        <button onclick="toggleModal('modal-book-confirm')" class="mt-2 bg-tmOrange text-white px-4 py-2 rounded-full text-xs tracking-[0.15em] uppercase text-left"><span class="lang-zh">立即預約</span><span class="lang-en">Book now</span></button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero：旅行社首頁感 -->
+  <header class="relative bg-tmDeepGreen text-white overflow-hidden">
+  <!-- 背景圖與遮罩 -->
+  <div class="absolute inset-0">
+    <img src="images/studio-cover.jpg" alt="富國島海景 Phu Quoc seascape" class="w-full h-full object-cover opacity-60">
+    <div class="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-black/75"></div>
+  </div>
+
+  <!-- 內容容器 -->
+  <div class="relative max-w-6xl mx-auto px-6 py-20 md:py-28 lg:py-32 flex flex-col md:flex-row items-center gap-10">
+    <div class="flex-1 space-y-5 max-w-4xl">
+      
+      <!-- 上方小標：優化字距與精緻感 -->
+      <p class="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-[10px] sm:text-xs tracking-[0.2em] uppercase backdrop-blur-sm">
+        <span class="w-1.5 h-1.5 rounded-full bg-tmOrange animate-pulse"></span>
+        Viet Nam Tailor-Made Journeys
+      </p>
+      
+      <!-- 主標題：適度縮小字體，增加行距與字距 -->
+      <h1 class="font-bold tracking-wide drop-shadow-xl space-y-4">
+        <!-- 中文版 -->
+        <span class="block lang-zh text-2xl sm:text-3xl md:text-4xl lg:text-5xl leading-snug md:leading-relaxed">
+          越南在地專業旅行社資源 ✕ 專屬中文對接<br>
+          為您安排<span class="text-tmOrange font-extrabold text-shadow">越南 & 富國島</span>的旅程
+        </span>
+        
+        <!-- 英文版：微調字體大小與修正語法錯誤 -->
+        <span class="block lang-en text-base sm:text-lg md:text-xl lg:text-2xl font-medium text-white/80 leading-normal pt-2">
+          Local Vietnam Expertise & Chinese Support Coordinator<br>
+          Plan your ideal trip to <span class="text-tmOrange font-semibold text-white">Viet Nam & Phu Quoc</span>
+        </span>
+      </h1>
+        <p class="text-sm md:text-base text-slate-100/90 max-w-xl leading-relaxed">
+          <span class="lang-zh">不只賣行程，而是陪您一起討論「怎樣玩最適合」。從機場接送、包車動線、門票代訂，一位中文顧問對接全越南專業團隊。</span><span class="lang-en">We are more than a tour seller – we help you decide what kind of trip fits you best. From airport transfers and private cars to tickets and our own SPA, one Mandarin-speaking consultant coordinates trusted local teams across Viet Nam.</span>  
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 mt-4">
+          <button onclick="toggleModal('modal-region-selector')" class="group flex-1 sm:flex-none sm:w-52 inline-flex items-center justify-center gap-3 bg-white text-tmDeepGreen font-black rounded-2xl px-6 py-3 shadow-md hover:shadow-lg hover:-translate-y-[1px] transition">
+            <i class="fa-solid fa-route text-lg text-tmOrange group-hover:scale-110 transition-transform"></i>
+            <span class="text-left">
+              <span class="block text-[11px] tracking-[0.18em] uppercase text-slate-500">Popular Routes</span>
+              <span class="text-sm"><span class="lang-zh">查看熱門行程</span><span class="lang-en">View popular routes</span><span class="lang-en">View popular routes</span></span>
+            </span>
+          </button>
+          <button onclick="toggleModal('modal-quote-confirm')" class="group flex-1 sm:flex-none sm:w-56 inline-flex items-center justify-center gap-3 bg-gradient-to-br from-tmOrange to-amber-400 font-black rounded-2xl px-6 py-3 shadow-[0_15px_45px_rgba(251,191,36,0.45)] hover:shadow-[0_18px_55px_rgba(251,191,36,0.6)] hover:-translate-y-[1px] transition">
+            <i class="fa-solid fa-calculator text-lg group-hover:rotate-12 transition-transform"></i>
+            <span class="text-left">
+              <span class="block text-[11px] tracking-[0.18em] uppercase text-amber-950/80">Smart Quotation</span>
+              <span class="text-sm"><span class="lang-zh">富國島預算試算</span><span class="lang-en">Phu Quoc </span><span class="lang-en">budget estimate</span></span>
+            </span>
+          </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-4 text-xs text-slate-200/80 mt-4">
+          <div class="flex items-center gap-2"><i class="fa-solid fa-user-check text-tmOrange"></i><span><span class="lang-zh">一對一中文/英文諮詢</span><span class="lang-en">1-on-1 Mandarin support</span><span class="lang-en">1-on-1 Mandarin & Englsih support</span></span></div>
+          <div class="flex items-center gap-2"><i class="fa-solid fa-car-side text-tmOrange"></i><span><span class="lang-zh">專車司機 & 多樣車型</span><span class="lang-en">Private driver & car options</span></span></div>
+          <div class="flex items-center gap-2"><i class="fa-solid fa-shield-heart text-tmOrange"></i><span><span class="lang-zh">透明報價・無隱藏</span><span class="lang-en">Transparent quotes, no hidden fees</span><span class="lang-en">Transparent quotes, no hidden fees</span></span></div>
+        </div>
+      </div>
+      <div class="w-full md:w-80 lg:w-96 bg-white/90 rounded-3xl shadow-2xl p-5 md:p-6 space-y-4 text-slate-800 backdrop-blur">
+        <h2 class="text-sm font-black text-tmDeepGreen tracking-[0.18em] uppercase"><span class="lang-zh">富國島預算快速試算</span><span class="lang-en">Quick estimate</span><span class="lang-en">Phu Quoc Quick estimate</span></h2>
+        <p class="text-xs text-slate-500 leading-relaxed"><span class="lang-zh">先試算大致預算，再決定要不要出發。以下為概算參考，實際以顧問回覆報價為準。</span><span class="lang-en">Estimate your budget first, then decide whether to go. These numbers are rough; your consultant will confirm a detailed quote.</span><span class="lang-en">Estimate your budget first, then decide whether to go. These numbers are rough; your consultant will confirm a detailed quote.</span></p>
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block mb-1 font-bold text-slate-600"><span class="lang-zh">人數</span><span class="lang-en">Guests</span><span class="lang-en">Guests</span></label>
+            <input id="calc-pax" type="number" min="1" onchange="updateEstimate()" class="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-tmOrange/60">
+          </div>
+          <div>
+            <label class="block mb-1 font-bold text-slate-600"><span class="lang-zh">天數</span><span class="lang-en">Days</span><span class="lang-en">Days</span></label>
+            <input id="calc-days" type="number" min="1" onchange="updateEstimate()" class="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-tmOrange/60">
+          </div>
+          <div class="col-span-2">
+            <label class="block mb-1 font-bold text-slate-600"><span class="lang-zh">每房每晚預算 (越南盾)</span><span class="lang-en">Budget per room per night (VND)</span><span class="lang-en">Budget per room per night (VND)</span></label>
+            <input id="calc-hotel" type="number" min="0" step="500000" onchange="updateEstimate()" placeholder="例如 2,000,000 / e.g. 2,000,000" class="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-tmOrange/60">
+          </div>
+        </div>
+        <div class="pt-2 border-t border-slate-100">
+          <p class="text-[11px] font-bold text-slate-500 mb-2"><span class="lang-zh">想去的景點</span><span class="lang-en">Places you want to visit</span><span class="lang-en">Places you want to visit</span></p>
+          <div class="grid grid-cols-3 gap-2 text-[11px]">
+            <label class="inline-flex items-center gap-1">
+              <input id="t-vin" type="checkbox" onchange="updateEstimate()" class="rounded text-tmOrange">
+              <span><span class="lang-zh">珍珠樂園</span><span class="lang-en">VinWonders theme park</span><span class="lang-en">VinWonders theme park</span></span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="t-cable" type="checkbox" onchange="updateEstimate()" class="rounded text-tmOrange">
+              <span><span class="lang-zh">跨海纜車</span><span class="lang-en">Sea-crossing cable car</span><span class="lang-en">Sea-crossing cable car</span></span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="t-kiss" type="checkbox" onchange="updateEstimate()" class="rounded text-tmOrange">
+              <span><span class="lang-zh">日落小鎮</span><span class="lang-en">Sunset Town</span><span class="lang-en">Sunset Town</span></span>
+            </label>
+            <label class="inline-flex items-center gap-1 col-span-3">
+              <input id="e-starfish" type="checkbox" onchange="updateEstimate()" class="rounded text-tmOrange">
+              <span><span class="lang-zh">北島海星沙灘 & 跳島</span><span class="lang-en">Starfish Beach & island hopping</span></span>
+            </label>
+          </div>
+        </div>
+        <div id="calc-result-box" class="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-1 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-600 flex items-center gap-1"><i class="fa-solid fa-car text-tmOrange"></i> 建議車型</span>
+            <span id="res-car" class="text-slate-700">—</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-600 flex items-center gap-1"><i class="fa-solid fa-coins text-amber-500"></i> 概算區間</span>
+            <span id="res-amount" class="text-tmDeepGreen font-black">0</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">※ 以上為<span class="lang-zh">粗略估算，實際費用將依日期、星級與細節調整。</span><span class="lang-en">Rough estimate only – final price depends on dates, hotel level and details.</span></p>
+        </div>
+        <button onclick="toggleModal('modal-quote-system')" class="w-full mt-1 bg-tmDeepGreen text-white text-xs tracking-[0.16em] uppercase rounded-2xl py-2.5 font-black hover:bg-tmOrange transition"><span class="lang-zh">將試算結果交給顧問評估</span><span class="lang-en">Send estimate to consultant</span><span class="lang-en">Send estimate to consultant</span></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 行程方案：更像旅行社產品列表 -->
+  <section id="tours" class="py-16 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+        <div>
+          <p class="text-xs font-bold tracking-[0.18em] text-tmOrange uppercase mb-2">Tour Packages</p>
+          <h2 class="text-2xl md:text-3xl font-black text-tmDeepGreen"><span class="lang-zh">熱門行程方案</span><span class="lang-en">Popular tour packages</span><span class="lang-en">Popular tour packages</span><span class="lang-en">Popular tour packages</span></h2>
+          <p class="text-sm text-slate-500 mt-2 max-w-xl">
+ <p class="text-sm text-slate-500 mt-2 max-w-xl">
+  <span class="lang-zh">
+    我們提供全越南熱門城市的經典旅遊套組，包含**河內、峴港與胡志明市**；若您選擇**富國島**，我們更提供專屬的**量身客製化服務**，可完全依您的人數與預算彈性調整。
+  </span>
+  <span class="lang-en">
+    We offer classic travel packages for Vietnam's top destinations, including **Hanoi, Da Nang, and Ho Chi Minh City**. For **Phu Quoc**, we exclusively provide **fully customized services** tailored to your party size and budget.
+  </span>
+</p>
+</p>
+        </div>
+        <button onclick="toggleModal('modal-addon-services')" class="inline-flex items-center gap-2 text-sm font-bold text-tmOrange hover:text-tmDeepGreen">
+          <span class="lang-zh">更多加值服務</span><span class="lang-en">More add-on services</span> <i class="fa-solid fa-chevron-right text-xs"></i>
+        </button>
+      </div>
+
+      <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 text-sm">
+        <!-- 富國島 -->
+        <article class="bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-lg transition overflow-hidden flex flex-col">
+          <div class="h-40 overflow-hidden">
+            <img src="images/phuquoc-cover.jpg" alt="富國島海景 Phu Quoc seascape" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
+          </div>
+          <div class="p-5 flex-1 flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="font-black text-tmDeepGreen text-base"><span class="lang-zh">富國島客製自由行 / 包車 / 套組</span><span class="lang-en">Phu Quoc custom trip / private car / packages</span></h3>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold">海島度假</span>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">任意天數，搭配<span class="lang-zh">跨海纜車</span><span class="lang-en">Sea-crossing cable car</span>、跳島、<span class="lang-zh">珍珠樂園</span><span class="lang-en">VinWonders theme park</span>與北島海星沙灘。適合親子 & 家庭小團。</p>
+            <div class="flex flex-wrap gap-1 mt-1 text-[11px] text-slate-500">
+              <span class="px-2 py-0.5 rounded-full bg-slate-50"><span class="lang-zh">包車 / 半自助</span><span class="lang-en">Private car / semi-independent</span></span>
+              <span class="px-2 py-0.5 rounded-full bg-slate-50"><span class="lang-zh">跳島暢遊</span><span class="lang-en">Island Hopping</span></span>
+            </div>
+            <div class="flex items-baseline justify-between mt-2">
+              <span class="text-[11px] text-slate-400"><span class="lang-zh">依日期 & 行程客製報價</span><span class="lang-en">Custom quotes by dates & Itinerary</span></span>
+              <div class="flex items-center gap-3">
+                <button onclick="toggleModal('modal-itinerary')" class="text-xs font-bold text-slate-400 hover:text-tmDeepGreen"><span class="lang-zh">建議行程</span><span class="lang-en">Sample itineraries</span></button>
+                <button onclick="showRegionIntro('phu-quoc')" class="text-xs font-bold text-tmOrange hover:text-tmDeepGreen"><span class="lang-zh">瞭解詳情</span><span class="lang-en">Learn more</span></button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 北越 -->
+        <article class="bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-lg transition overflow-hidden flex flex-col">
+          <div class="h-40 overflow-hidden">
+            <img src="images/hanoi-cover.jpg" alt="河內與沙壩" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
+          </div>
+          <div class="p-5 flex-1 flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="font-black text-tmDeepGreen text-base"><span class="lang-zh">北越：河內 & 沙壩</span><span class="lang-en">North: Hanoi & Sapa</span> 5 天 4 夜</h3>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-900 text-white font-bold">文化首都</span>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">河內老城、火車街、沙壩山城與下龍灣遊船，一次收集北越代表風景。</p>
+            <div class="flex flex-wrap gap-1 mt-1 text-[11px] text-slate-500">
+              <span class="px-2 py-0.5 rounded-full bg-slate-50">景點豐富</span>
+              <span class="px-2 py-0.5 rounded-full bg-slate-50">河內古都風情・老城美食・北越經典之旅</span>
+            </div>
+            <div class="flex items-baseline justify-between mt-2">
+              <button onclick="showRegionIntro('hanoi')" class="text-xs font-bold text-tmOrange hover:text-tmDeepGreen">行程內容</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 中越 -->
+        <article class="bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-lg transition overflow-hidden flex flex-col">
+          <div class="h-40 overflow-hidden">
+            <img src="images/danang-cover.jpg" alt="峴港與會安" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
+          </div>
+          <div class="p-5 flex-1 flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="font-black text-tmDeepGreen text-base"><span class="lang-zh">中越：峴港・會安・巴拿山</span><span class="lang-en">Central: Da Nang, Hoi An &amp; Ba Na Hills</span> 5 天</h3>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold">世界遺產</span>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">黃金佛手橋、會安燈籠夜景與順化皇城，充滿異國感又不太耗體力。</p>
+            <div class="flex flex-wrap gap-1 mt-1 text-[11px] text-slate-500">
+              <span class="px-2 py-0.5 rounded-full bg-slate-50">適合親子 & 情侶</span>
+              <span class="px-2 py-0.5 rounded-full bg-slate-50">高度自由活動時間</span>
+            </div>
+            <div class="flex items-baseline justify-between mt-2">
+              <button onclick="showRegionIntro('danang')" class="text-xs font-bold text-tmOrange hover:text-tmDeepGreen">行程內容</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 南越 -->
+        <article class="bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-lg transition overflow-hidden flex flex-col">
+          <div class="h-40 overflow-hidden">
+            <img src="images/muine-dalat.jpg" alt="美奈沙漠與大叻 Mui Ne desert &amp; Da Lat" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
+          </div>
+          <div class="p-5 flex-1 flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="font-black text-tmDeepGreen text-base"><span class="lang-zh">南越三城</span><span class="lang-en">Southern Viet Nam trip-HCM & Mui NE& Da Lat</span>：胡志明・美奈・大叻</h3>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold">景色多變</span>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">沙漠日出、山城小鎮與大城夜生活，喜歡拍照與多變景色的旅人首選。</p>
+            <div class="flex flex-wrap gap-1 mt-1 text-[11px] text-slate-500">
+              <span class="px-2 py-0.5 rounded-full bg-slate-50">適合好友揪團</span>
+              <span class="px-2 py-0.5 rounded-full bg-slate-50">東方巴黎</span>
+            </div>
+            <div class="flex items-baseline justify-between mt-2">
+              <button onclick="showRegionIntro('saigon')" class="text-xs font-bold text-tmOrange hover:text-tmDeepGreen">行程內容</button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- <span class="lang-zh">更多旅遊加值服務</span><span class="lang-en">More travel add-on services</span>（點擊區塊開啟彈窗） -->
+  <section id="addon-services" class="py-12 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+      <button onclick="toggleModal('modal-addon-services')" class="w-full text-left">
+        <div class="max-w-5xl mx-auto bg-white/90 backdrop-blur-sm rounded-4xl shadow-[0_12px_35px_rgba(15,23,42,0.08)] border border-slate-100 px-6 md:px-8 py-6 md:py-7 flex flex-col md:flex-row items-center justify-between gap-5 hover:bg-slate-50/80 hover:shadow-[0_18px_45px_rgba(15,23,42,0.12)] transition">
+          <div class="flex items-center gap-4 md:gap-6">
+            <div class="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-tmOrange/10 flex items-center justify-center text-tmOrange">
+              <i class="fa-solid fa-star text-lg md:text-xl"></i>
+            </div>
+            <div class="text-sm md:text-base">
+              <div class="inline-flex items-center gap-2 px-2 py-0.5 rounded-full bg-tmOrange/10 text-tmOrange text-[10px] font-bold tracking-[0.18em] uppercase mb-1">Add-on Services</div>
+              <h2 class="text-lg md:text-xl font-black text-tmDeepGreen mb-1"><span class="lang-zh">更多旅遊加值服務</span><span class="lang-en">更多旅遊加值服務</span><span class="lang-en">More travel add-on services</span></h2>
+              <p class="text-xs md:text-sm text-slate-500"><span class="lang-zh">透過我們值得信賴的在地網絡，為您無縫對接機票、簽證、酒店和奧黛體驗的專家服務。</span><span class="lang-en">Through our trusted local network, we seamlessly connect you with expert services for flights, visas, hotels, and Ao Dai experiences.</span></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-xs text-slate-500">
+            <div class="hidden sm:flex flex-col items-start gap-1">
+              <span class="inline-flex items-center gap-1"><i class="fa-solid fa-check text-tmOrange"></i> 依喜好客製搭配</span>
+              <span class="inline-flex items-center gap-1"><i class="fa-solid fa-check text-tmOrange"></i> 幫您把關品質</span>
+            </div>
+            <div class="flex items-center gap-2 text-tmOrange font-bold">
+              <span><span class="lang-zh">點此查看詳情</span><span class="lang-en">Tap to see details</span></span>
+              <i class="fa-solid fa-arrow-right text-sm"></i>
+            </div>
+          </div>
+        </div>
+      </button>
+    </div>
+  </section>
+
+
+  <!-- 富國島服務專區（沿用既有文案） -->
+  <section id="services" class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+      <div class="text-center max-w-3xl mx-auto mb-10">
+        <p class="text-xs font-bold tracking-[0.18em] text-tmOrange uppercase mb-2">Services</p>
+        <h2 class="text-2xl md:text-3xl font-black text-tmDeepGreen mb-2"><span class="lang-zh">富國島一站式服務</span><span class="lang-en">One-stop services in Phu Quoc</span><span class="lang-en">One-stop services in Phu Quoc</span></h2>
+        <p class="text-sm text-slate-500"><span class="lang-zh">不論您只需要機場接送、一天包車，還是整個越南多城市動線，我們都可以從富國島出發幫你串起來。</span><span class="lang-en">Whether you just need airport transfers and a day of private car, or a multi-city route, we can connect everything starting from Phu Quoc.</span></p>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 text-center text-xs">
+        <div class="bg-slate-50 p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition">
+          <i class="fa-solid fa-car text-tmOrange text-2xl mb-3"></i>
+          <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">私人包車</span><span class="lang-en">Private car hire</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">專業越南司機，多種車型可選。</span><span class="lang-en">Professional local drivers with multiple vehicle options.</span></p>
+        </div>
+        <div class="bg-slate-50 p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition">
+          <i class="fa-solid fa-ticket text-tmOrange text-2xl mb-3"></i>
+          <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">門票代訂</span><span class="lang-en">Ticket booking</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">珍珠樂園</span><span class="lang-en">VinWonders theme park</span>、纜車、樂園免排隊。</span><span class="lang-en">Skip the lines for VinWonders, cable cars and other parks.</span></p>
+        </div>
+        <button onclick="toggleModal('modal-spa-special')" class="bg-tmDeepGreen text-white p-6 rounded-3xl shadow-md border border-tmOrange/40 hover:shadow-xl hover:-translate-y-[1px] transition flex flex-col items-center">
+          <i class="fa-solid fa-spa text-tmOrange text-3xl mb-3"></i>
+          <h3 class="font-bold mb-1"><span class="lang-zh">直營 SPA</span><span class="lang-en">In-house SPA</span></h3>
+          <p class="text-[11px] text-tmGreen/80 leading-snug"><span class="lang-zh">自營店家・品質控管<br>預約享貴賓價</span><span class="lang-en">Our own SPA with quality control<br>Special guest rates for our travellers</span></p>
+        </button>
+        <div class="bg-slate-50 p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition">
+          <i class="fa-solid fa-map-marked-alt text-tmOrange text-2xl mb-3"></i>
+          <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">客製行程</span><span class="lang-en">Custom itineraries</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">依照年齡、喜好與體力微調。</span><span class="lang-en">Fine-tuned to age, interests and energy level.</span></p>
+        </div>
+        <div class="bg-slate-50 p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition">
+          <i class="fa-solid fa-utensils text-tmOrange text-2xl mb-3"></i>
+          <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">私房美食</span><span class="lang-en">Food recommendations</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">在地地陪吃貨帶路。</span><span class="lang-en">13 years of local foodie experience guiding you.</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 必去景點 -->
+  <section id="attractions" class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+        <div>
+          <p class="text-xs font-bold tracking-[0.18em] text-tmOrange uppercase mb-2">Highlights</p>
+          <h2 class="text-2xl md:text-3xl font-black text-tmDeepGreen"><span class="lang-zh">富國島必去景點</span><span class="lang-en">Must-visit spots in Phu Quoc</span></h2>
+          <p class="text-sm text-slate-500 mt-2 max-w-xl"><span class="lang-zh">下單前想先確認值不值得來？這些地點大概可以說明為什麼大家會愛上富國島。</span><span class="lang-en">Not sure if Phu Quoc is worth the trip? These places explain why so many travellers fall in love with the island.</span></p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-xs">
+        <div class="bg-slate-50 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg overflow-hidden group">
+          <div class="h-40 overflow-hidden zoom-cursor" onclick="openImageModal('images/grand-world.png.jpg')">
+            <img src="images/grand-world.png.jpg" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Grand World Phu Quoc">
+          </div>
+          <div class="p-5">
+            <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">富國大世界</span><span class="lang-en">Grand World Phu Quoc</span></h3>
+            <p class="text-slate-500"><span class="lang-zh">24 小時不夜城，威尼斯運河與竹屋建築一次收集。</span><span class="lang-en">A 24-hour entertainment complex with Venetian canals and bamboo architecture in one place.</span></p>
+          </div>
+        </div>
+        <div class="bg-slate-50 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg overflow-hidden group">
+          <div class="h-40 overflow-hidden zoom-cursor" onclick="openImageModal('images/cable-car.jpg')">
+            <img src="images/cable-car.jpg" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Sea cable car">
+          </div>
+          <div class="p-5">
+            <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">世界最長跨海纜車</span><span class="lang-en">Record-breaking sea cable car</span></h3>
+            <p class="text-slate-500"><span class="lang-zh">搭纜車飛越海面直達香島水樂園，白天玩水晚上看日落。</span><span class="lang-en">Ride across the sea straight to Hon Thom water park – play by day, watch the sunset by evening.</span></p>
+          </div>
+        </div>
+        <div class="bg-slate-50 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg overflow-hidden group">
+          <div class="h-40 overflow-hidden zoom-cursor" onclick="openImageModal('images/vinwonders.jpeg')">
+            <img src="images/vinwonders.jpeg" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="VinWonders theme park">
+          </div>
+          <div class="p-5">
+            <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">珍珠樂園</span><span class="lang-en">VinWonders theme park</span> & 動物園</span><span class="lang-en">VinWonders & safari</span></h3>
+            <p class="text-slate-500"><span class="lang-zh">越南最大主題樂園，適合親子放電整整一天。</span><span class="lang-en">Viet Nam's largest theme park, perfect for a full day of family fun.</span></p>
+          </div>
+        </div>
+        <div class="bg-slate-50 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg overflow-hidden group">
+          <div class="h-40 overflow-hidden zoom-cursor" onclick="openImageModal('images/starfish.jpg')">
+            <img src="images/starfish.jpg" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Starfish Beach">
+          </div>
+          <div class="p-5">
+            <h3 class="font-bold text-tmDeepGreen mb-1"><span class="lang-zh">北島海星沙灘</span><span class="lang-en">Starfish Beach (Bai Sao)</span></h3>
+            <p class="text-slate-500"><span class="lang-zh">清澈海水與紅海星，是許多人來富國的唯一理由。</span><span class="lang-en">Crystal-clear water and red starfish – for many travellers, this alone is worth the trip.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 預約流程 -->
+  <section id="process" class="py-16 bg-slate-50">
+    <div class="max-w-5xl mx-auto px-4 md:px-6">
+      <div class="text-center max-w-3xl mx-auto mb-10">
+        <p class="text-xs font-bold tracking-[0.18em] text-tmOrange uppercase mb-2">Booking Flow</p>
+        <h2 class="text-2xl md:text-3xl font-black text-tmDeepGreen mb-2"><span class="lang-zh">預約流程怎麼走？</span><span class="lang-en">How does booking work?</span><span class="lang-en">How does booking work?</span><span class="lang-en">How does booking work?</span></h2>
+        <p class="text-sm text-slate-500"><span class="lang-zh">盡量把「決定要不要出發」變成一件輕鬆的事，先聊聊、先估價，再決定。</span><span class="lang-en">We want deciding “go or not” to feel easy – chat first, estimate first, then decide.</span></p>
+      </div>
+      <div class="grid md:grid-cols-4 gap-4 text-xs">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+          <div class="w-8 h-8 rounded-full bg-tmOrange text-white flex items-center justify-center font-black text-sm">1</div>
+          <h3 class="font-bold text-tmDeepGreen"><span class="lang-zh">線上諮詢</span><span class="lang-en">Online consultation</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">透過 LINE / WhatsApp 告訴我們<span class="lang-zh">人數</span><span class="lang-en">Guests</span>、<span class="lang-zh">天數</span><span class="lang-en">Days</span>與大致預算。</span><span class="lang-en">Tell us your group size, dates and rough budget via LINE / WhatsApp.</span></p>
+        </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+          <div class="w-8 h-8 rounded-full bg-tmOrange text-white flex items-center justify-center font-black text-sm">2</div>
+          <h3 class="font-bold text-tmDeepGreen"><span class="lang-zh">行程草案 & 試算</span><span class="lang-en">Draft plan & estimate</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">顧問提供初版行程與概算費用，一起微調到你覺得舒服。</span><span class="lang-en">We send a draft itinerary and estimate, then fine-tune together until it feels right.</span></p>
+        </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+          <div class="w-8 h-8 rounded-full bg-tmOrange text-white flex items-center justify-center font-black text-sm">3</div>
+          <h3 class="font-bold text-tmDeepGreen"><span class="lang-zh">確認與付款</span><span class="lang-en">Confirm & pay</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">確認日期與細節後，依約定方式付款，即完成預訂。</span><span class="lang-en">Once dates and details are confirmed, complete payment via the agreed method to secure your trip.</span></p>
+        </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+          <div class="w-8 h-8 rounded-full bg-tmOrange text-white flex items-center justify-center font-black text-sm">4</div>
+          <h3 class="font-bold text-tmDeepGreen"><span class="lang-zh">出發 & 在地支援</span><span class="lang-en">Travel & local support</span></h3>
+          <p class="text-slate-500"><span class="lang-zh">當地團隊負責接待，提供緊急聯絡窗口。</span><span class="lang-en">Local partners host you on the ground while we provide emergency hotline.</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-16 bg-white">
+    <div class="max-w-4xl mx-auto px-4 md:px-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+          <p class="text-xs font-bold tracking-[0.18em] text-tmOrange uppercase mb-2">FAQ</p>
+          <h2 class="text-2xl md:text-3xl font-black text-tmDeepGreen"><span class="lang-zh">富國島常見問題</span><span class="lang-en">Common questions about Phu Quoc</span><span class="lang-en">Common questions about Phu Quoc</span><span class="lang-en">Common questions about Phu Quoc</span></h2>
+        </div>
+        <button onclick="toggleModal('modal-faq-all')" class="text-sm font-bold text-tmOrange hover:text-tmDeepGreen inline-flex items-center gap-2">
+          <span class="lang-zh">查看完整 100 題百科</span><span class="lang-en">View the full 100 Q&A</span> <i class="fa-solid fa-plus-circle"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <details class="bg-slate-50 rounded-2xl p-4 shadow-sm group">
+          <summary class="font-bold flex items-center justify-between cursor-pointer">
+            1. 行程可以臨時調整嗎？
+            <i class="fa-solid fa-plus group-open:rotate-45 transition"></i>
+          </summary>
+          <p class="mt-3 text-slate-600 leading-relaxed">客製化行程最大優點就是彈性。出發前三至七天如有狀況，都可以與我們討論調整，僅需配合當地空位情形。</p>
+        </details>
+        <details class="bg-slate-50 rounded-2xl p-4 shadow-sm group">
+          <summary class="font-bold flex items-center justify-between cursor-pointer">
+            2. 什麼時候去富國島天氣最好？
+            <i class="fa-solid fa-plus group-open:rotate-45 transition"></i>
+          </summary>
+          <p class="mt-3 text-slate-600 leading-relaxed">11 月到隔年 4 月為乾季，海水顏色最漂亮、浪比較小，是多數旅人首選月份。</p>
+        </details>
+        <details class="bg-slate-50 rounded-2xl p-4 shadow-sm group">
+          <summary class="font-bold flex items-center justify-between cursor-pointer">
+            3. 要怎麼換越南盾比較划算？
+            <i class="fa-solid fa-plus group-open:rotate-45 transition"></i>
+          </summary>
+          <p class="mt-3 text-slate-600 leading-relaxed">可以先帶美金或台幣，到機場或當地金店兌換。部分車資與門票也可接受刷卡或電子支付。</p>
+        </details>
+        <details class="bg-slate-50 rounded-2xl p-4 shadow-sm group">
+          <summary class="font-bold flex items-center justify-between cursor-pointer">
+            4. 富國島治安如何？適合帶長輩小孩嗎？
+            <i class="fa-solid fa-plus group-open:rotate-45 transition"></i>
+          </summary>
+          <p class="mt-3 text-slate-600 leading-relaxed">富國島是越南治安相對友善的區域，步調悠閒，樂園與多數公共空間皆有無障礙設施，很適合三代同遊。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA 區：引導填表或聯絡 -->
+  <section class="pb-16 px-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="bg-white rounded-4xl border border-tmOrange/20 shadow-xl p-6 md:p-9 flex flex-col md:flex-row items-center gap-6">
+        <div class="flex-1 text-left space-y-3">
+          <h3 class="text-xl md:text-2xl font-black text-tmDeepGreen"><span class="lang-zh">想先確認預算再決定？</span><span class="lang-en">Want to confirm the budget before deciding?</span><span class="lang-en">Want to know the budget before deciding?</span></h3>
+          <p class="text-sm text-slate-600"><span class="lang-zh">填寫簡單預約單，告訴我們預計出發日期、<span class="lang-zh">天數</span><span class="lang-en">Days</span>與需求，我們會以旅行社角度幫你抓最合理的預算區間與建議玩法。</span><span class="lang-en">Fill in a short form with your dates, duration and needs – we will estimate a reasonable budget range and suggest ways to play, from a travel agency’s perspective.</span></p>
+          <div class="flex flex-wrap gap-3 text-xs text-slate-500">
+            <span class="inline-flex items-center gap-1"><i class="fa-solid fa-clock text-tmOrange"></i> 平日 24 小時內回覆</span>
+            <span class="inline-flex items-center gap-1"><i class="fa-solid fa-language text-tmOrange"></i> 中文 / 英文 / 越文皆可溝通</span>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3 w-full md:w-auto">
+          <button onclick="toggleModal('modal-choice')" class="bg-tmDeepGreen text-white rounded-2xl px-8 py-3 font-black text-sm shadow-md hover:bg-tmOrange transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-file-signature"></i> <span class="lang-zh">填寫預約單</span><span class="lang-en">Fill in booking form</span>
+          </button>
+          <button onclick="toggleModal('modal-contact-list')" class="text-xs font-bold text-tmOrange hover:text-tmDeepGreen flex items-center justify-center gap-2">
+            <span class="lang-zh">或直接加 LINE / WhatsApp 諮詢</span><span class="lang-en">Or chat via LINE / WhatsApp</span> <i class="fa-solid fa-chevron-right text-[10px]"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-tmDeepGreen text-white py-10">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-sm">
+      <div>
+        <div class="text-lg font-black tracking-[0.16em] uppercase">VN Travel Studio</div>
+        <p class="text-tmGreen/80 text-xs mt-1">富國島客製規劃 ＆ 越南全區中文地接窗口>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-xs text-tmGreen/80">
+      </div>
+      <p class="text-[10px] text-tmGreen/60">&copy; 2026 Tamarind Travel. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <!-- 右下角社群快捷 -->
+  <!-- 社群浮標：點擊展開 -->
+  <div id="social-launcher" class="fixed bottom-6 right-6 z-40 flex flex-col items-center gap-2">
+
+    <!-- 子按鈕（預設隱藏） -->
+    <div id="social-items" class="flex flex-col items-center gap-2 transition-all duration-300 overflow-hidden" style="max-height:0; opacity:0; pointer-events:none;">
+
+      <a href="https://www.facebook.com/TamarindTravelPQ?mibextid=wwXIfr" target="_blank" class="social-item line-float" title="Facebook">
+        <div class="bg-[#1877F2] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
+          <i class="fa-brands fa-facebook-f text-white text-lg"></i>
+        </div>
+      </a>
+
+      <a href="https://www.instagram.com/vn_travelstudio?igsh=cDBtNjRtdzl4aml2&utm_source=qr" target="_blank" class="social-item line-float" title="Instagram">
+        <div class="bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
+          <i class="fa-brands fa-instagram text-white text-lg"></i>
+        </div>
+      </a>
+
+      <button onclick="alert('請搜尋 WeChat ID: soyuuuuu')" class="social-item line-float" title="WeChat">
+        <div class="bg-[#07C160] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
+          <i class="fa-brands fa-weixin text-white text-lg"></i>
+        </div>
+      </button>
+
+      <a href="https://wa.me/886978099267" target="_blank" class="social-item line-float" title="WhatsApp">
+        <div class="bg-[#25D366] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
+          <i class="fa-brands fa-whatsapp text-white text-lg"></i>
+        </div>
+      </a>
+
+      <a href="https://line.me/ti/p/k2mbDjPZUw" target="_blank" class="social-item line-float" title="LINE">
+        <div class="bg-[#06C755] p-3 rounded-full shadow-2xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
+          <i class="fa-brands fa-line text-white text-2xl"></i>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- 主觸發按鈕 -->
+    <button id="social-toggle" onclick="toggleSocial()" class="line-float">
+      <div class="bg-tmDeepGreen p-3 rounded-full shadow-2xl flex items-center justify-center border-4 border-white hover:scale-110 transition w-14 h-14">
+        <i id="social-toggle-icon" class="fa-solid fa-comment-dots text-white text-2xl transition-transform duration-300"></i>
+      </div>
+    </button>
+  </div>
+
+  <script>
+    let socialOpen = false;
+    function toggleSocial() {
+      socialOpen = !socialOpen;
+      const items = document.getElementById('social-items');
+      const icon  = document.getElementById('social-toggle-icon');
+      if (socialOpen) {
+        items.style.maxHeight = '320px';
+        items.style.opacity   = '1';
+        items.style.pointerEvents = 'auto';
+        icon.style.transform  = 'rotate(180deg)';
+        icon.className = 'fa-solid fa-xmark text-white text-2xl transition-transform duration-300';
+      } else {
+        items.style.maxHeight = '0';
+        items.style.opacity   = '0';
+        items.style.pointerEvents = 'none';
+        icon.style.transform  = 'rotate(0deg)';
+        icon.className = 'fa-solid fa-comment-dots text-white text-2xl transition-transform duration-300';
+      }
+    }
+  </script>
+
+  <!-- ===== 各種 Modal，沿用 & 調整排版 ===== -->
+
+  <!-- 關於我們 -->
+  <div id="modal-about" class="fixed inset-0 z-[110] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleModal('modal-about')"></div>
+    <div class="bg-white w-full max-w-xl rounded-4xl relative z-10 overflow-hidden shadow-2xl fade-in border-t-[10px] border-tmGreen">
+      <div class="p-8 md:p-9 text-left">
+        <div class="flex justify-between items-start mb-6">
+          <h3 class="text-xl md:text-2xl font-black text-tmDeepGreen"><span class="lang-zh">關於 Tamarind Travel</span><span class="lang-en">About Tamarind Travel</span></h3>
+          <button onclick="toggleModal('modal-about')" class="text-slate-400 hover:text-tmOrange text-2xl font-black">&times;</button>
+        </div>
+        <div class="text-slate-600 leading-relaxed space-y-4 text-sm md:text-base">
+          <p>我們以 <span class="text-tmDeepGreen font-bold">富國島 (Phu Quoc)</span> 為基地，延伸規劃至河內、峴港、胡志明等全越南主要城市，扮演的是「旅行顧問」而不只是「代訂」角色。</p>
+          <p>每一位旅客都有不同的旅遊目的與步調，我們擅長用簡單的問題了解你的期待，再將在地可靠資源組合成專屬行程，讓你安心把交通與動線交給我們，專心享受當下。</p>
+        </div>
+        <button onclick="toggleModal('modal-about')" class="mt-8 w-full py-3.5 bg-tmDeepGreen text-white font-bold rounded-2xl text-sm hover:bg-tmOrange transition">了解了，開始規劃我的行程</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 建議行程 Modal：保留原五大系列簡版 -->
+  <div id="modal-itinerary" class="fixed inset-0 z-[110] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleModal('modal-itinerary')"></div>
+    <div class="bg-white w-full max-w-3xl rounded-4xl relative z-10 overflow-hidden shadow-2xl fade-in max-h-[85vh] flex flex-col">
+      <div class="bg-tmOrange p-6 md:p-7 text-white flex items-center justify-between">
+        <h3 class="text-lg md:text-2xl font-black italic">建議行程精選</h3>
+        <button onclick="toggleModal('modal-itinerary')" class="text-3xl">&times;</button>
+      </div>
+      <div class="p-7 space-y-5 overflow-y-auto custom-scroll text-sm">
+        <div class="border-l-4 border-tmGreen pl-5">
+          <h4 class="font-black text-tmDeepGreen mb-1">【網美朝聖】纜車 & <span class="lang-zh">日落小鎮</span><span class="lang-en">Sunset Town</span>一日遊</h4>
+          <p class="text-slate-600"><span class="lang-zh">跨海纜車</span><span class="lang-en">Sea-crossing cable car</span>、香島水樂園 + <span class="lang-zh">日落小鎮</span><span class="lang-en">Sunset Town</span>親吻橋，一天收集富國島代表風景。</p>
+        </div>
+        <div class="border-l-4 border-tmGreen pl-5">
+          <h4 class="font-black text-tmDeepGreen mb-1">【親子歡樂】<span class="lang-zh">珍珠樂園</span><span class="lang-en">VinWonders theme park</span> + 動物園</h4>
+          <p class="text-slate-600">適合帶小朋友，全日遊樂園 + 野生動物互動，晚上回飯店直接睡翻。</p>
+        </div>
+        <div class="border-l-4 border-tmGreen pl-5">
+          <h4 class="font-black text-tmDeepGreen mb-1">【海洋呼吸】三島跳島浮潛</h4>
+          <p class="text-slate-600">指甲島、雲腿島與鄰近無人島，在透明海水中浮潛與享用船上海鮮餐。</p>
+        </div>
+        <div class="border-l-4 border-tmGreen pl-5">
+          <h4 class="font-black text-tmDeepGreen mb-1">【北島慢活】海星沙灘 + 大世界</h4>
+          <p class="text-slate-600">白天海星沙灘發呆，晚上到富國大世界散步吃宵夜。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 預約說明 Modal -->
+  <div id="modal-choice" class="fixed inset-0 z-[120] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-choice')"></div>
+    <div class="bg-white w-full max-w-md rounded-4xl relative z-10 p-8 shadow-2xl border-t-8 border-tmOrange fade-in text-center">
+      <h3 class="text-xl font-black text-tmDeepGreen mb-3"><span class="lang-zh">準備好開始規劃了嗎？</span><span class="lang-en">Ready to start planning?</span></h3>
+      <p class="text-sm text-slate-500 mb-7"><span class="lang-zh">填寫預約單</span><span class="lang-en">Fill in booking form</span>不代表一定要出發，只是讓我們知道你的條件，方便幫你抓預算與動線。</span><span class="lang-en">Filling in the form doesn’t mean you must depart – it simply tells us your conditions so we can size the budget and routing.</span></p>
+      <button onclick="startBooking()" class="w-full mb-3 bg-tmDeepGreen text-white rounded-2xl py-3 font-black text-sm hover:bg-tmOrange transition flex items-center justify-center gap-2">
+        <i class="fa-solid fa-calendar-check"></i> <span class="lang-zh">填寫預約單</span><span class="lang-en">Fill in booking form</span>
+      </button>
+      <button onclick="toggleModal('modal-choice')" class="text-xs font-bold text-slate-400 hover:text-tmDeepGreen">先再逛逛網站</button>
+    </div>
+  </div>
+
+  <!-- Google 表單 Modal -->
+  <div id="modal-form" class="fixed inset-0 z-[130] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-form')"></div>
+    <div class="bg-white w-full max-w-4xl h-[90vh] rounded-4xl relative z-10 overflow-hidden shadow-2xl flex flex-col">
+      <div class="bg-tmDeepGreen text-white px-6 py-4 flex items-center justify-between">
+        <h3 class="font-bold text-sm md:text-base flex items-center gap-2"><i class="fa-solid fa-file-signature"></i> 旅行願望清單</h3>
+        <button onclick="toggleModal('modal-form')" class="text-3xl">&times;</button>
+      </div>
+      <div class="flex-1">
+        <iframe id="form-iframe" src="" class="w-full h-full" frameborder="0">載入中…</iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ 全百科 Modal：沿用你原本 50 題結構（此處可嵌回原 HTML，略） -->
+  <div id="modal-faq-all" class="fixed inset-0 z-[150] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-faq-all')"></div>
+    <div class="bg-white w-full max-w-5xl h-[90vh] rounded-[2.5rem] relative z-10 overflow-hidden shadow-2xl fade-in flex flex-col text-left">
+      <div class="bg-tmDeepGreen p-6 text-white flex justify-between items-center sticky top-0 z-30 shadow-lg text-left">
+        <h3 class="font-bold flex items-center text-lg text-left"><i class="fa-solid fa-book-open mr-3 text-tmOrange"></i><span class="lang-zh">富國島 10 項常見問題</span><span class="lang-en">10 common Phu Quoc questions</span></h3>
+        <button onclick="toggleModal('modal-faq-all')" class="text-3xl hover:text-tmOrange transition text-center">&times;</button>
+      </div>
+      <div class="flex-grow overflow-y-auto p-6 md:p-10 bg-slate-50 custom-scroll text-left">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+          <div class="space-y-4 text-left">
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">1. 行程可以臨時調整嗎？</span><span class="lang-en">1. Can the itinerary be adjusted at the last minute?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">客製化行程的優勢在於彈性，送出預約表單後，如遇狀況，請於出發日前三至七天與我們溝通調整。建議送出前先確認初步規劃。</span><span class="lang-en">Custom trips are flexible. After you submit the booking form, please contact us 3 to 7 days before departure if changes are needed. We recommend confirming the draft plan before submitting.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">2. 什麼時候去富國島天氣最好？</span><span class="lang-en">2. When is the best weather in Phu Quoc?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">11 月至 4 月是乾季，天氣穩定且海水最透，是最佳旅遊時機。</span><span class="lang-en">November to April is the dry season, when the weather is stable and the sea is clearest. It is the best travel period.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">3. 要怎麼換越南盾比較划算？</span><span class="lang-en">3. What is the best way to exchange Vietnamese dong?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">可攜帶美金或台幣到機場、當地金店兌換。Grab 叫車可綁台灣信用卡，非常便利。</span><span class="lang-en">You can bring USD or TWD to exchange at the airport or local gold shops. Grab can also be linked with a Taiwan credit card, which is very convenient.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">4. 富國島治安如何？適合帶長輩小孩嗎？</span><span class="lang-en">4. How safe is Phu Quoc? Is it suitable for seniors and children?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">治安極佳且島民友善，是越南最安全的地區之一。適合親子與長輩同行。</span><span class="lang-en">Safety is excellent and locals are friendly, making it one of the safest areas in Viet Nam. It is suitable for families and seniors.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">5. 要給小費嗎？</span><span class="lang-en">5. Should I tip?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">非強迫性，但建議飯店搬運或床頭可給 20,000~50,000 越南盾表達謝意。</span><span class="lang-en">Tipping is optional, but 20,000 to 50,000 VND is a nice gesture for hotel porters or housekeeping.</span></p></details>
+          </div>
+          <div class="space-y-4 text-left">
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">6. 什麼電壓？插頭能不能直接用？</span><span class="lang-en">6. What is the voltage? Can I use my plugs directly?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">220V 電壓，插座為兩孔圓形或扁形通用，一般台灣充電器可直接使用。</span><span class="lang-en">The voltage is 220V, and sockets are usually compatible with two-pin round or flat plugs. Most Taiwan chargers can be used directly.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">7. 直飛富國島需要簽證嗎？</span><span class="lang-en">7. Do I need a visa for direct flights to Phu Quoc?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">直飛富國島免簽證 30 天。若經由河內或胡志明轉機則需電子簽 (E-Visa)。</span><span class="lang-en">Direct flights to Phu Quoc are usually visa-free for 30 days. If you transfer via Hanoi or Ho Chi Minh City, an e-visa is usually required.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">8. 富國島有什麼親子景點？</span><span class="lang-en">8. What family-friendly attractions are in Phu Quoc?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">適合！有無障礙設施良好的樂園與動物園，是親子首選。</span><span class="lang-en">Yes. Theme parks and zoos with good accessibility make Phu Quoc a top family choice.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">9. 網路要怎麼處理？</span><span class="lang-en">9. How should I handle mobile data or internet?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">建議自行購買網路卡或機場抵達後現場購買也非常方便。</span><span class="lang-en">We recommend buying a SIM card yourself, or purchasing one at the airport upon arrival, which is also very convenient.</span></p></details>
+            <details class="bg-white p-5 rounded-2xl shadow-sm text-left"><summary class="font-bold flex justify-between items-center list-none text-left"><span class="lang-zh">10. 遇到緊急狀況怎麼辦？</span><span class="lang-en">10. What if I have an emergency?</span><i class="fa-solid fa-plus group-open:rotate-45 transition"></i></summary><p class="mt-4 text-sm text-slate-500 leading-relaxed text-left"><span class="lang-zh">如遇緊急狀況，凡預約客製服務，我們提供 24 小時中文緊急聯絡電話。</span><span class="lang-en">If an emergency occurs, customers who book custom services receive a 24/7 Mandarin emergency contact number.</span></p></details>
+            <div class="mt-6 bg-tmDeepGreen p-6 rounded-3xl text-white text-center"><p class="font-bold text-lg mb-4"><span class="lang-zh">還想看更完整的 100 題？</span><span class="lang-en">Want to see the full 100 Q&A?</span></p><a href="https://line.me/ti/p/k2mbDjPZUw" target="_blank" rel="noopener noreferrer" class="inline-block bg-tmOrange text-white px-8 py-3 rounded-full font-black" onclick="window.open('https://line.me/ti/p/k2mbDjPZUw', '_blank', 'noopener,noreferrer'); return false;"><span class="lang-zh">點我加入 LINE 官方帳號看完整 100 題</span><span class="lang-en">Open LINE Official Account for the full 100 Q&A</span></a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><div id="modal-image" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-black/90 backdrop-blur-md" onclick="this.classList.add('hidden'); document.body.style.overflow='';">
+    <img id="full-res-image" src="" class="max-w-full max-h-full rounded-lg shadow-2xl object-contain" alt="">
+  </div>
+
+  <!-- 自動報價確認 & 系統 Modal（沿用連結） -->
+  <!-- 立即預約確認彈窗 -->
+  <div id="modal-book-confirm" class="fixed inset-0 z-[140] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-book-confirm')"></div>
+    <div class="relative z-10 bg-white w-full max-w-md rounded-4xl p-8 shadow-2xl border-t-8 border-tmOrange text-center">
+      <div class="w-16 h-16 rounded-full bg-tmOrange/10 flex items-center justify-center mx-auto mb-5">
+        <i class="fa-solid fa-calendar-check text-tmOrange text-2xl"></i>
+      </div>
+      <h3 class="text-xl font-black text-tmDeepGreen mb-3">準備開始預約了嗎？</h3>
+      <p class="text-sm text-slate-500 mb-6">填寫預約需求單，顧問將在 24 小時內與您聯繫，為您安排最適合的行程。</p>
+      <div class="flex flex-col gap-2">
+        <button onclick="toggleModal('modal-book-confirm'); startBooking();" class="w-full bg-tmDeepGreen text-white rounded-2xl py-3 font-black text-sm hover:bg-tmOrange transition">
+          <i class="fa-solid fa-pen-to-square mr-2"></i>前往填寫預約單
+        </button>
+        <button onclick="toggleModal('modal-book-confirm')" class="text-xs font-bold text-slate-400 hover:text-tmDeepGreen">再想想</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-quote-confirm" class="fixed inset-0 z-[140] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-quote-confirm')"></div>
+    <div class="relative z-10 bg-white w-full max-w-md rounded-4xl p-8 shadow-2xl border-t-8 border-tmOrange text-center">
+      <div class="w-16 h-16 rounded-full bg-tmOrange/10 flex items-center justify-center mx-auto mb-5">
+        <i class="fa-solid fa-calculator text-tmOrange text-2xl"></i>
+      </div>
+      <h3 class="text-xl font-black text-tmDeepGreen mb-3">開啟自動報價系統</h3>
+      <p class="text-sm text-slate-500 mb-6">系統會依<span class="lang-zh">人數</span><span class="lang-en">Guests</span>與<span class="lang-zh">天數</span><span class="lang-en">Days</span>計算粗略區間，送出預約後再由顧問協助修正到符合你的預算。</p>
+      <div class="flex flex-col gap-2 mb-5">
+        <button onclick="openQuoteSystem()" class="w-full bg-tmDeepGreen text-white rounded-2xl py-3 font-black text-sm hover:bg-tmOrange transition">立即前往試算</button>
+        <button onclick="toggleModal('modal-quote-confirm')" class="text-xs font-bold text-slate-400 hover:text-tmDeepGreen">再想想</button>
+      </div>
+      <!-- 通訊軟體聯絡（已隱藏） -->
+    </div>
+  </div>
+
+  <div id="modal-quote-system" class="fixed inset-0 z-[200] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="toggleModal('modal-quote-system')"></div>
+    <div class="bg-white w-full max-w-5xl h-[90vh] rounded-4xl relative z-10 overflow-hidden shadow-2xl flex flex-col">
+      <div class="bg-tmDeepGreen text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <h3 class="font-bold text-sm md:text-base flex items-center gap-2"><i class="fa-solid fa-calculator text-tmOrange"></i> Tamarind Travel 自動報價系統</h3>
+        <button onclick="toggleModal('modal-quote-system')" class="text-3xl leading-none">&times;</button>
+      </div>
+      <div class="flex-1 min-h-0">
+        <iframe id="quote-system-iframe" src="" data-src="https://tamarind05.github.io/auto-quotation/" class="w-full h-full border-none" frameborder="0" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地區選擇 & 聯絡專員 Modal（沿用 regionData） -->
+  <div id="modal-region-selector" class="fixed inset-0 z-[150] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-md" onclick="toggleModal('modal-region-selector')"></div>
+    <div class="bg-white w-full max-w-lg rounded-4xl relative z-10 p-8 shadow-2xl">
+      <div class="flex items-start justify-between mb-6">
+        <div>
+          <h3 class="text-xl md:text-2xl font-black text-tmDeepGreen"><span class="lang-zh">想去哪一段越南？</span><span class="lang-en">Which part of Viet Nam do you want to visit?</span></h3>
+          <p class="text-xs text-slate-500 mt-1"><span class="lang-zh">先選區域，再讓顧問幫你把富國島與其他城市串起來。</span><span class="lang-en">Choose a region first, then let us connect Phu Quoc with other cities into one smooth route.</span><span class="lang-en">Choose a region first, then let us connect Phu Quoc with other cities into one smooth route.</span></p>
+        </div>
+        <button onclick="toggleModal('modal-region-selector')" class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-tmOrange/10 hover:text-tmOrange transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <button onclick="showRegionIntro('phu-quoc')" class="w-full flex items-center justify-between p-4 rounded-3xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-tmGreen hover:shadow-md transition group">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center text-xl">🏝</div>
+            <div class="text-left">
+              <div class="font-black text-slate-800 group-hover:text-tmDeepGreen"><span class="lang-zh">富國島 Phu Quoc</span><span class="lang-en">Phu Quoc Island</span><span class="lang-en">Phu Quoc Island</span></div>
+              <div class="text-xs text-slate-500"><span class="lang-zh">海島度假・親子 / 情侶首選</span><span class="lang-en">Island getaway for families & couples</span><span class="lang-en">Island getaway for families & couples</span></div>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-tmGreen group-hover:translate-x-1 transition"></i>
+        </button>
+        <button onclick="showRegionIntro('hanoi')" class="w-full flex items-center justify-between p-4 rounded-3xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-tmGreen hover:shadow-md transition group">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl bg-orange-50 flex items-center justify-center text-xl">🏮</div>
+            <div class="text-left">
+              <div class="font-black text-slate-800 group-hover:text-tmDeepGreen"><span class="lang-zh">北越：河內 & 沙壩</span><span class="lang-en">North: Hanoi & Sapa</span><span class="lang-en">North: Hanoi & Sapa</span></div>
+              <div class="text-xs text-slate-500"><span class="lang-zh">山城雲海・下龍灣</span><span class="lang-en">Mountain clouds & Ha Long Bay</span><span class="lang-en">Mountain clouds & Ha Long Bay</span></div>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-tmGreen group-hover:translate-x-1 transition"></i>
+        </button>
+        <button onclick="showRegionIntro('danang')" class="w-full flex items-center justify-between p-4 rounded-3xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-tmOrange hover:shadow-md transition group">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center text-xl">🌉</div>
+            <div class="text-left">
+              <div class="font-black text-slate-800 group-hover:text-tmOrange"><span class="lang-zh">中越：峴港・會安・巴拿山</span><span class="lang-en">Central: Da Nang, Hoi An &amp; Ba Na Hills</span><span class="lang-en">Central: Da Nang, Hoi An & Ba Na Hills</span></div>
+              <div class="text-xs text-slate-500"><span class="lang-zh">佛手橋・世界遺產古鎮</span><span class="lang-en">Golden Bridge & heritage old towns</span></div>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-tmOrange group-hover:translate-x-1 transition"></i>
+        </button>
+        <button onclick="showRegionIntro('saigon')" class="w-full flex items-center justify-between p-4 rounded-3xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-tmDeepGreen hover:shadow-md transition group">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl bg-yellow-50 flex items-center justify-center text-xl">🌵</div>
+            <div class="text-left">
+              <div class="font-black text-slate-800 group-hover:text-tmDeepGreen"><span class="lang-zh">南越：胡志明・美奈・大叻</span><span class="lang-en">South: Saigon, Mui Ne &amp; Da Lat</span></div>
+              <div class="text-xs text-slate-500"><span class="lang-zh">沙漠日出・山城小鎮</span><span class="lang-en">Desert sunrise & hill towns</span><span class="lang-en">Desert sunrise & hill towns</span><span class="lang-en">Desert sunrise & hill towns</span></div>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-tmDeepGreen group-hover:translate-x-1 transition"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-region-intro" class="fixed inset-0 z-[160] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="toggleModal('modal-region-intro')"></div>
+    <div class="bg-white w-full max-w-xl rounded-4xl relative z-10 overflow-hidden shadow-2xl fade-in flex flex-col max-h-[90vh]">
+      <div class="h-44 md:h-52 relative overflow-hidden">
+        <img id="intro-img" src="" class="w-full h-full object-cover" alt="行程封面">
+        <div class="absolute inset-0 bg-gradient-to-t from-white via-transparent"></div>
+        <button onclick="toggleModal('modal-region-intro')" class="absolute top-4 right-4 bg-black/35 text-white w-9 h-9 rounded-full flex items-center justify-center hover:bg-tmOrange transition">&times;</button>
+      </div>
+      <div class="p-6 md:p-7 overflow-y-auto flex-1 custom-scroll text-sm">
+        <div id="intro-tags" class="flex flex-wrap gap-2 mb-3"></div>
+        <h3 id="intro-title" class="text-base md:text-lg font-black text-tmDeepGreen mb-3 leading-snug"></h3>
+        <div id="intro-desc"></div>
+      </div>
+      <div id="intro-contact-footer" class="p-5 border-t border-slate-100">
+        <button onclick="goContact()" class="w-full py-3 rounded-2xl bg-tmOrange text-white font-black text-sm hover:scale-[1.01] transition flex items-center justify-center gap-2">
+          <i class="fa-brands fa-line text-lg"></i> <span class="lang-zh">聯繫專員了解此行程</span><span class="lang-en">Contact consultant about this route</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-contact-list" class="fixed inset-0 z-[200] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-contact-list')"></div>
+    <div class="bg-white w-full max-w-md rounded-4xl relative z-10 p-7 shadow-2xl text-center border-t-8 border-tmGreen fade-in text-sm">
+      <h3 class="text-lg md:text-xl font-black text-tmDeepGreen mb-6"><span class="lang-zh">選一個你習慣的聯絡方式</span><span class="lang-en">Choose your preferred contact method</span></h3>
+      <div class="space-y-3">
+        <a href="https://line.me/ti/p/k2mbDjPZUw" target="_blank" class="flex items-center justify-between bg-[#06C755] text-white p-4 rounded-2xl hover:scale-[1.02] hover:shadow-md transition">
+          <div class="flex items-center gap-3"><i class="fa-brands fa-line text-2xl"></i><span class="font-bold"><span class="lang-zh">LINE 專員 1</span><span class="lang-en">LINE consultant 1</span></span></div>
+          <i class="fa-solid fa-chevron-right opacity-60"></i>
+        </a>
+        <a href="https://line.me/ti/p/q7w9DluuVj" target="_blank" class="flex items-center justify-between bg-[#06C755] text-white p-4 rounded-2xl hover:scale-[1.02] hover:shadow-md transition">
+          <div class="flex items-center gap-3"><i class="fa-brands fa-line text-2xl"></i><span class="font-bold"><span class="lang-zh">LINE 專員 2</span><span class="lang-en">LINE consultant 2</span></span></div>
+          <i class="fa-solid fa-chevron-right opacity-60"></i>
+        </a>
+        <a href="https://wa.me/886978099267" target="_blank" class="flex items-center justify-between bg-[#25D366] text-white p-4 rounded-2xl hover:scale-[1.02] hover:shadow-md transition">
+          <div class="flex items-center gap-3"><i class="fa-brands fa-whatsapp text-2xl"></i><span class="font-bold"><span class="lang-zh">WhatsApp 專員 1</span><span class="lang-en">WhatsApp consultant 1</span></span></div>
+          <i class="fa-solid fa-chevron-right opacity-60"></i>
+        </a>
+        <a href="https://wa.me/886939837792" target="_blank" class="flex items-center justify-between bg-[#25D366] text-white p-4 rounded-2xl hover:scale-[1.02] hover:shadow-md transition">
+          <div class="flex items-center gap-3"><i class="fa-brands fa-whatsapp text-2xl"></i><span class="font-bold"><span class="lang-zh">WhatsApp 專員 2</span><span class="lang-en">WhatsApp consultant 2</span></span></div>
+          <i class="fa-solid fa-chevron-right opacity-60"></i>
+        </a>
+        <button onclick="copyAndNotify('soyuuuuu','WeChat 專員 1')" class="w-full flex items-center justify-between bg-[#07C160] text-white p-4 rounded-2xl hover:scale-[1.02] hover:shadow-md transition text-left">
+          <div class="flex items-center gap-3"><i class="fa-brands fa-weixin text-2xl"></i><span class="font-bold"><span class="lang-zh">WeChat 專員 1</span><span class="lang-en">WeChat consultant 1</span></span></div>
+          <div class="flex items-center gap-2 opacity-70 text-[11px]"><span><span class="lang-zh">點擊複製 ID</span><span class="lang-en">Tap to copy ID</span></span><i class="fa-solid fa-copy"></i></div>
+        </button>
+        <button onclick="copyAndNotify('yoshilin05','WeChat 專員 2')" class="w-full flex items-center justify-between bg-[#07C160] text-white p-4 rounded-2xl hover:scale-[1.02] hover:shadow-md transition text-left">
+          <div class="flex items-center gap-3"><i class="fa-brands fa-weixin text-2xl"></i><span class="font-bold"><span class="lang-zh">WeChat 專員 2</span><span class="lang-en">WeChat consultant 2</span></span></div>
+          <div class="flex items-center gap-2 opacity-70 text-[11px]"><span><span class="lang-zh">點擊複製 ID</span><span class="lang-en">Tap to copy ID</span></span><i class="fa-solid fa-copy"></i></div>
+        </button>
+      </div>
+      <button onclick="toggleModal('modal-contact-list')" class="mt-6 text-xs font-bold text-slate-400 hover:text-tmDeepGreen"><span class="lang-zh">先回網站看看</span><span class="lang-en">Back to site</span></button>
+    </div>
+  </div>
+
+
+
+  <!-- 加值服務統一彈窗：內含四項服務卡片 -->
+  <div id="modal-addon-services" class="fixed inset-0 z-[165] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-addon-services')"></div>
+    <div class="bg-white w-full max-w-5xl rounded-4xl relative z-10 shadow-2xl fade-in max-h-[90vh] flex flex-col">
+      <div class="px-6 md:px-8 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3 flex-wrap">
+          <div>
+            <h3 class="text-lg md:text-2xl font-black text-tmDeepGreen"><span class="lang-zh">更多旅遊加值服務</span><span class="lang-en">More travel add-on services</span></h3>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">
+              <span class="lang-zh">可依照需求與預算自由加購，實際金額由顧問回覆報價。</span>
+              <span class="lang-en">Mix and match based on your needs and budget – a consultant will follow up with a quote.</span>
+            </p>
+          </div>
+          <button onclick="toggleModal('modal-contact-list')" class="flex items-center gap-1.5 bg-tmOrange text-white text-xs font-black px-4 py-2 rounded-xl hover:opacity-90 transition shrink-0">
+            <i class="fa-solid fa-comment-dots"></i>
+            <span class="lang-zh">聯繫專員</span><span class="lang-en">Contact Us</span>
+          </button>
+        </div>
+        <button onclick="toggleModal('modal-addon-services')" class="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-tmOrange/10 hover:text-tmOrange transition ml-2 shrink-0">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-5 md:p-7 overflow-y-auto custom-scroll text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- 奧黛騎服務 -->
+          <div class="p-5 flex flex-col gap-3 bg-gradient-to-b from-tmDeepGreen/5 to-slate-50 rounded-3xl border-2 border-tmDeepGreen/20 relative overflow-hidden">
+            <!-- 獨家特色標記 -->
+            <div class="absolute top-3 right-3">
+              <span class="text-[10px] bg-tmOrange text-white font-black px-2 py-0.5 rounded-full tracking-wide">✦ 獨家特色</span>
+            </div>
+            <div class="w-11 h-11 bg-tmDeepGreen/15 rounded-xl flex items-center justify-center text-2xl">🥻</div>
+            <div>
+              <h4 class="font-black text-sm md:text-base text-tmDeepGreen mb-1 flex items-center gap-1">
+                <span class="lang-zh">奧黛騎服務</span><span class="lang-en">Áo Dài Experience</span>
+              </h4>
+              <p class="text-slate-500 text-xs leading-relaxed">
+                <span class="lang-zh">越南傳統奧黛服飾服務人員，騎車穿梭街頭拍攝，打造獨一無二的旅遊記憶。據點涵蓋河內・胡志明・峴港・富國島。</span>
+                <span class="lang-en">traditional Vietnamese Áo Dài and ride through the streets for a unique photo experience. Available in Hanoi, Ho Chi Minh City, Da Nang and Phu Quoc.</span>
+              </p>
+            </div>
+            <!-- 體驗亮點 -->
+            <div class="bg-white rounded-2xl p-3 space-y-1.5 border border-tmDeepGreen/10">
+              <p class="text-[11px] font-black text-tmDeepGreen mb-1">✦ 體驗亮點</p>
+              <div class="flex items-start gap-1.5 text-[11px] text-slate-600">
+                <i class="fa-solid fa-circle-check text-tmOrange mt-0.5 shrink-0"></i>
+                <span><span class="lang-zh">奧黛服裝租借 + 基本髮型造型</span><span class="lang-en">Dress rental + basic hair styling</span></span>
+              </div>
+              <div class="flex items-start gap-1.5 text-[11px] text-slate-600">
+                <i class="fa-solid fa-circle-check text-tmOrange mt-0.5 shrink-0"></i>
+                <span><span class="lang-zh">騎車街拍路線規劃（在地司機帶路）</span><span class="lang-en">Curated riding & photo route with local guide</span></span>
+              </div>
+              <div class="flex items-start gap-1.5 text-[11px] text-slate-600">
+                <i class="fa-solid fa-circle-check text-tmOrange mt-0.5 shrink-0"></i>
+                <span><span class="lang-zh">可加購專業攝影師隨行拍攝</span><span class="lang-en">Optional add-on: professional photographer</span></span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-1 mt-auto">
+              <span class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full"><span class="lang-zh">河內</span><span class="lang-en">Hanoi</span></span>
+              <span class="text-[10px] bg-tmOrange/10 text-tmOrange font-bold px-2 py-0.5 rounded-full"><span class="lang-zh">胡志明</span><span class="lang-en">Saigon</span></span>
+              <span class="text-[10px] bg-tmDeepGreen/10 text-tmDeepGreen font-bold px-2 py-0.5 rounded-full"><span class="lang-zh">峴港</span><span class="lang-en">Da Nang</span></span>
+              <span class="text-[10px] bg-tmGreen/20 text-tmDeepGreen font-bold px-2 py-0.5 rounded-full"><span class="lang-zh">富國島</span><span class="lang-en">Phu Quoc</span></span>
+            </div>
+          </div>
+
+          <!-- 飯店預訂 -->
+          <div class="p-5 flex flex-col gap-3 bg-slate-50 rounded-3xl border border-slate-100">
+            <div class="w-11 h-11 bg-tmOrange/10 rounded-xl flex items-center justify-center text-2xl">🏨</div>
+            <div>
+              <h4 class="font-black text-sm md:text-base text-tmDeepGreen mb-1">
+                <span class="lang-zh">飯店預訂</span><span class="lang-en">Hotel Booking</span>
+              </h4>
+              <p class="text-slate-500 text-xs leading-relaxed">
+                <span class="lang-zh">嚴選合作飯店，在地價格與評價雙重把關，避免踩雷。</span>
+                <span class="lang-en">Curated partner hotels verified by local price and actual stay reviews – no unpleasant surprises.</span>
+              </p>
+            </div>
+            <ul class="text-[11px] text-slate-500 list-disc list-inside space-y-1">
+              <li><span class="lang-zh">依預算與偏好（海景 / 市景 / Villa）給選項。</span><span class="lang-en">Options by budget and preference: ocean view, city view or villa.</span></li>
+              <li><span class="lang-zh">協助溝通加床、連通房與特殊需求。</span><span class="lang-en">We handle requests for extra beds, connecting rooms and special needs.</span></li>
+            </ul>
+            <p class="text-[11px] text-slate-400 mt-auto">
+              <span class="lang-zh">專業代訂專家協助。</span>
+              <span class="lang-en">Professional Booking Support & Facilitation</span>
+            </p>
+          </div>
+
+          <!-- 簽證代辦 -->
+          <div class="p-5 flex flex-col gap-3 bg-slate-50 rounded-3xl border border-slate-100">
+            <div class="w-11 h-11 bg-tmGreen/20 rounded-xl flex items-center justify-center text-2xl">📋</div>
+            <div>
+              <h4 class="font-black text-sm md:text-base text-tmDeepGreen mb-1">
+                <span class="lang-zh">簽證代辦</span><span class="lang-en">Visa Service</span>
+              </h4>
+              <p class="text-slate-500 text-xs leading-relaxed">
+                <span class="lang-zh">越南電子簽代辦，全程中文說明，協助確認資料與流程。</span>
+                <span class="lang-en">Vietnam e-visa agency service with full guidance on documents and the application process.</span>
+              </p>
+            </div>
+            <ul class="text-[11px] text-slate-500 list-disc list-inside space-y-1">
+              <li><span class="lang-zh">適用需經河內 / 胡志明轉機入境旅客。</span><span class="lang-en">For travellers transiting via Hanoi or Ho Chi Minh City.</span></li>
+              <li><span class="lang-zh">一般件約 3–5 個工作天，可詢問急件。</span><span class="lang-en">Standard processing: 3–5 business days. Rush options available.</span></li>
+            </ul>
+            <p class="text-[11px] text-slate-400 mt-auto">
+              <span class="lang-zh">提醒：直飛富國島可享 30 天免簽，無需申請簽證。</span>
+              <span class="lang-en">Note: Direct flights to Phu Quoc are visa-free for 30 days – no visa needed.</span>
+            </p>
+          </div>
+
+          <!-- 機票代訂 -->
+          <div class="p-5 flex flex-col gap-3 bg-slate-50 rounded-3xl border border-slate-100">
+            <div class="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-2xl">✈️</div>
+            <div>
+              <h4 class="font-black text-sm md:text-base text-tmDeepGreen mb-1">
+                <span class="lang-zh">機票代訂</span><span class="lang-en">Flight Booking</span>
+              </h4>
+              <p class="text-slate-500 text-xs leading-relaxed">
+                <span class="lang-zh">協助預訂機票組合，優先考量轉機時間與動線順暢度。</span>
+                <span class="lang-en">Flight Booking Assistance: Focus on Efficient Connections</span>
+              </p>
+            </div>
+            <ul class="text-[11px] text-slate-500 list-disc list-inside space-y-1">
+              <li><span class="lang-zh">評估直飛 / 轉機、不同航空公司差異。</span><span class="lang-en">Evaluate direct vs connecting flights across different airlines.</span></li>
+              <li><span class="lang-zh">可配合既有里程或已訂機票做銜接。</span><span class="lang-en">Can work around existing miles or already-booked tickets.</span></li>
+            </ul>
+            <div class="flex flex-wrap gap-1 mt-auto">
+              <span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full"><span class="lang-zh">依需求國家預定</span><span class="lang-en">Multi-Destination Booking Support Based on Your Request</span></span>
+          
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>：可沿用你原本的內容連到 SPA 官網 -->
+  <div id="modal-spa-special" class="fixed inset-0 z-[170] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-md" onclick="toggleModal('modal-spa-special')"></div>
+    <div class="bg-white w-full max-w-5xl rounded-4xl relative z-10 overflow-hidden shadow-2xl fade-in flex flex-col lg:flex-row max-h-[90vh]">
+      <div class="lg:w-[40%] relative min-h-[260px]">
+        <img src="https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&q=80&w=1000" alt="Tamarind SPA" class="absolute inset-0 w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-tmDeepGreen/70 to-transparent"></div>
+        <div class="absolute bottom-6 left-6 text-white">
+          <p class="text-xs font-black tracking-[0.18em] uppercase text-tmOrange mb-1">Direct Management</p>
+          <h4 class="text-2xl font-black">Tamarind SPA</h4>
+        </div>
+      </div>
+      <div class="lg:w-[60%] p-7 md:p-9 overflow-y-auto custom-scroll text-sm">
+        <div class="inline-block px-4 py-1 rounded-full bg-tmGreen/10 text-tmDeepGreen font-black text-[11px] tracking-[0.18em] uppercase mb-4">Premium Spa Service</div>
+        <h3 class="text-xl md:text-2xl font-black text-tmDeepGreen mb-3"><span class="lang-zh">讓身體在海島節奏裡慢下來</span><span class="lang-en">Let your body slow down to island rhythm</span></h3>
+        <p class="text-slate-600 mb-5 leading-relaxed">探索與玩樂之後，身體也值得一趟旅行。Tamarind SPA 結合在地天然植萃與資深芳療師團隊，提供富國島少見的安靜療癒空間。</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+          <div class="flex items-center gap-2 bg-slate-50 rounded-2xl px-3 py-2"><i class="fa-solid fa-leaf text-tmOrange"></i><span class="font-bold text-slate-700">天然植萃精油</span></div>
+          <div class="flex items-center gap-2 bg-slate-50 rounded-2xl px-3 py-2"><i class="fa-solid fa-hands text-tmOrange"></i><span class="font-bold text-slate-700">10 年以上資深技師</span></div>
+          <div class="flex items-center gap-2 bg-slate-50 rounded-2xl px-3 py-2"><i class="fa-solid fa-shield-heart text-tmOrange"></i><span class="font-bold text-slate-700">獨立包廂・隱私高</span></div>
+          <div class="flex items-center gap-2 bg-slate-50 rounded-2xl px-3 py-2"><i class="fa-solid fa-gift text-tmOrange"></i><span class="font-bold text-slate-700">預約客專屬優惠</span></div>
+        </div>
+        <a href="https://tamarind05.github.io/tamarindspa/" target="_blank" class="block w-full text-center py-3.5 rounded-2xl bg-tmDeepGreen text-white font-black text-sm hover:bg-tmOrange transition">前往 SPA 預約官網</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
