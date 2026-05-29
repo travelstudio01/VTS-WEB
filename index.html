@@ -289,6 +289,9 @@
       });
     }
   </script>
+  <!-- Botpress AI 客服 -->
+  <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+  <script src="https://files.bpcontent.cloud/2026/05/26/17/20260526170405-9MQIQWRL.js"></script>
 </head>
 <body>
   <!-- 固定導覽列：標準旅行社 IA -->
@@ -791,44 +794,46 @@
 
   <!-- 右下角社群快捷 -->
   <!-- 社群浮標：點擊展開 -->
-  <div id="social-launcher" class="fixed bottom-6 right-6 z-40 flex flex-col items-center gap-2">
+  <!-- 社群浮標（左）+ AI助理標籤（右，貼近 Botpress 原生泡泡） -->
 
-    <!-- 子按鈕（預設隱藏） -->
-    <div id="social-items" class="flex flex-col items-center gap-2 transition-all duration-300 overflow-hidden" style="max-height:0; opacity:0; pointer-events:none;">
+  <!-- 社群展開按鈕 - 固定在右下，Botpress 泡泡左側 -->
+  <div id="social-launcher" class="fixed bottom-6 z-50" style="right:90px; display:flex; flex-direction:column; align-items:center;">
 
-      <a href="https://www.facebook.com/TamarindTravelPQ?mibextid=wwXIfr" target="_blank" class="social-item line-float" title="Facebook">
+    <!-- 子按鈕：往上絕對展開 -->
+    <div id="social-items" style="
+      position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%) translateY(0);
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      opacity:0; pointer-events:none;
+      transition:opacity 0.3s ease, transform 0.3s ease;
+    ">
+      <a href="https://www.facebook.com/TamarindTravelPQ?mibextid=wwXIfr" target="_blank" class="line-float" title="Facebook">
         <div class="bg-[#1877F2] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
           <i class="fa-brands fa-facebook-f text-white text-lg"></i>
         </div>
       </a>
-
-      <a href="https://www.instagram.com/vn_travelstudio?igsh=cDBtNjRtdzl4aml2&utm_source=qr" target="_blank" class="social-item line-float" title="Instagram">
+      <a href="https://www.instagram.com/vn_travelstudio?igsh=cDBtNjRtdzl4aml2&utm_source=qr" target="_blank" class="line-float" title="Instagram">
         <div class="bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
           <i class="fa-brands fa-instagram text-white text-lg"></i>
         </div>
       </a>
-
-      <button onclick="alert('請搜尋 WeChat ID: soyuuuuu')" class="social-item line-float" title="WeChat">
+      <button onclick="alert('請搜尋 WeChat ID: soyuuuuu')" class="line-float" title="WeChat">
         <div class="bg-[#07C160] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
           <i class="fa-brands fa-weixin text-white text-lg"></i>
         </div>
       </button>
-
-      <a href="https://wa.me/886978099267" target="_blank" class="social-item line-float" title="WhatsApp">
+      <a href="https://wa.me/886978099267" target="_blank" class="line-float" title="WhatsApp">
         <div class="bg-[#25D366] p-2.5 rounded-full shadow-xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
           <i class="fa-brands fa-whatsapp text-white text-lg"></i>
         </div>
       </a>
-
-      <a href="https://line.me/ti/p/k2mbDjPZUw" target="_blank" class="social-item line-float" title="LINE">
+      <a href="https://line.me/ti/p/k2mbDjPZUw" target="_blank" class="line-float" title="LINE">
         <div class="bg-[#06C755] p-3 rounded-full shadow-2xl flex items-center justify-center border-4 border-white hover:scale-110 transition">
           <i class="fa-brands fa-line text-white text-2xl"></i>
         </div>
       </a>
-
     </div>
 
-    <!-- 主觸發按鈕 -->
+    <!-- 社群主按鈕 -->
     <button id="social-toggle" onclick="toggleSocial()" class="line-float">
       <div class="bg-tmDeepGreen p-3 rounded-full shadow-2xl flex items-center justify-center border-4 border-white hover:scale-110 transition w-14 h-14">
         <i id="social-toggle-icon" class="fa-solid fa-comment-dots text-white text-2xl transition-transform duration-300"></i>
@@ -836,23 +841,71 @@
     </button>
   </div>
 
+  <!-- AI 助理標籤（貼在 Botpress 泡泡上方） -->
+  <div id="ai-label" class="fixed z-50" style="bottom:5.5rem; right:1.5rem; pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:3px;">
+    <span style="
+      background:#FFB703; color:#1a2e1c;
+      font-size:0.55rem; font-weight:900; letter-spacing:0.06em;
+      padding:0.2rem 0.6rem; border-radius:100px;
+      font-family:'Noto Sans TC',sans-serif;
+      white-space:nowrap; box-shadow:0 3px 10px rgba(255,183,3,0.5);
+      animation:aiLabelBounce 2.5s ease-in-out infinite;
+    ">✨ AI 助理</span>
+    <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #FFB703;"></div>
+  </div>
+  <style>
+    @keyframes aiLabelBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+  </style>
+
+  <!-- Botpress 事件監聽 -->
   <script>
+    window.addEventListener('load', function () {
+      const poll = setInterval(function () {
+        if (window.botpress) {
+          window.botpress.on('webchat:opened', function () {
+            document.getElementById('ai-label').style.opacity = '0';
+          });
+          window.botpress.on('webchat:closed', function () {
+            document.getElementById('ai-label').style.opacity = '1';
+          });
+          clearInterval(poll);
+        }
+      }, 300);
+    });
+  </script>
+  <script>
+    let bpOpen = false;
+    function toggleBotpress() {
+      if (!window.botpress) return;
+      bpOpen = !bpOpen;
+      bpOpen ? window.botpress.open() : window.botpress.close();
+    }
+    window.addEventListener('load', function () {
+      const poll = setInterval(function () {
+        if (window.botpress) {
+          window.botpress.on('webchat:opened', function () { bpOpen = true; });
+          window.botpress.on('webchat:closed',  function () { bpOpen = false; });
+          clearInterval(poll);
+        }
+      }, 300);
+    });
+
     let socialOpen = false;
     function toggleSocial() {
       socialOpen = !socialOpen;
       const items = document.getElementById('social-items');
       const icon  = document.getElementById('social-toggle-icon');
       if (socialOpen) {
-        items.style.maxHeight = '320px';
-        items.style.opacity   = '1';
+        items.style.opacity       = '1';
         items.style.pointerEvents = 'auto';
-        icon.style.transform  = 'rotate(180deg)';
+        items.style.transform     = 'translateX(-50%) translateY(0)';
+        icon.style.transform      = 'rotate(180deg)';
         icon.className = 'fa-solid fa-xmark text-white text-2xl transition-transform duration-300';
       } else {
-        items.style.maxHeight = '0';
-        items.style.opacity   = '0';
+        items.style.opacity       = '0';
         items.style.pointerEvents = 'none';
-        icon.style.transform  = 'rotate(0deg)';
+        items.style.transform     = 'translateX(-50%) translateY(10px)';
+        icon.style.transform      = 'rotate(0deg)';
         icon.className = 'fa-solid fa-comment-dots text-white text-2xl transition-transform duration-300';
       }
     }
