@@ -465,7 +465,6 @@
         <button onclick="toggleModal('modal-addon-services')" class="hover:text-tmOrange transition"><span class="lang-zh">服務項目</span><span class="lang-en">Services</span></button>
         <a href="#process" class="hover:text-tmOrange transition"><span class="lang-zh">預約流程</span><span class="lang-en">Booking flow</span></a>
         <a href="#faq" class="hover:text-tmOrange transition"><span class="lang-zh">常見問題</span><span class="lang-en">FAQ</span></a>
-        <button onclick="toggleModal('modal-book-confirm')" class="bg-tmOrange text-white px-5 py-2 rounded-full shadow-sm hover:shadow-md hover:-translate-y-[1px] transition text-xs tracking-[0.15em] uppercase"><span class="lang-zh">立即預約</span><span class="lang-en">Book now</span></button>
       </div>
       <button class="md:hidden text-slate-600" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
         <i class="fa-solid fa-bars text-xl"></i>
@@ -530,7 +529,7 @@
             <i class="fa-solid fa-calculator text-lg group-hover:rotate-12 transition-transform"></i>
             <span class="text-left">
               <span class="block text-[11px] tracking-[0.18em] uppercase text-amber-950/80">Smart Quotation</span>
-              <span class="text-sm"><span class="lang-zh">富國島預算試算</span><span class="lang-en">Phu Quoc </span><span class="lang-en">budget estimate</span></span>
+              <span class="text-sm"><span class="lang-zh">富國島行程預約</span><span class="lang-en">Phu Quoc </span><span class="lang-en">trip reservation</span></span>
             </span>
           </button>
         </div>
@@ -1122,10 +1121,10 @@
       <div class="w-16 h-16 rounded-full bg-tmOrange/10 flex items-center justify-center mx-auto mb-5">
         <i class="fa-solid fa-calculator text-tmOrange text-2xl"></i>
       </div>
-      <h3 class="text-xl font-black text-tmDeepGreen mb-3">開啟自動報價系統</h3>
+      <h3 class="text-xl font-black text-tmDeepGreen mb-3">開啟行程預約系統</h3>
       <p class="text-sm text-slate-500 mb-6">系統會依<span class="lang-zh">人數</span><span class="lang-en">Guests</span>與<span class="lang-zh">天數</span><span class="lang-en">Days</span>計算粗略區間，送出預約後再由顧問協助修正到符合你的預算。</p>
       <div class="flex flex-col gap-2 mb-5">
-        <button onclick="openQuoteSystem()" class="w-full bg-tmDeepGreen text-white rounded-2xl py-3 font-black text-sm hover:bg-tmOrange transition">立即前往試算</button>
+        <button onclick="openQuoteSystem()" class="w-full bg-tmDeepGreen text-white rounded-2xl py-3 font-black text-sm hover:bg-tmOrange transition">立即前往預約</button>
         <button onclick="toggleModal('modal-quote-confirm')" class="text-xs font-bold text-slate-400 hover:text-tmDeepGreen">再想想</button>
       </div>
       <!-- 通訊軟體聯絡（已隱藏） -->
@@ -1136,7 +1135,7 @@
     <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="toggleModal('modal-quote-system')"></div>
     <div class="bg-white w-full max-w-5xl h-[90vh] rounded-4xl relative z-10 overflow-hidden shadow-2xl flex flex-col">
       <div class="bg-tmDeepGreen text-white px-6 py-4 flex items-center justify-between shrink-0">
-        <h3 class="font-bold text-sm md:text-base flex items-center gap-2"><i class="fa-solid fa-calculator text-tmOrange"></i> Tamarind Travel 自動報價系統</h3>
+        <h3 class="font-bold text-sm md:text-base flex items-center gap-2"><i class="fa-solid fa-calculator text-tmOrange"></i> VN TRAVEL STUDIO 行程預約系統</h3>
         <button onclick="toggleModal('modal-quote-system')" class="text-3xl leading-none">&times;</button>
       </div>
       <div class="flex-1 min-h-0">
