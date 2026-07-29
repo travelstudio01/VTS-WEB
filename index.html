@@ -85,9 +85,9 @@
       }
     }
 
-    // Hero：打開 Google 表單預約
+    // Hero：打開行程預約系統
     function startBooking() {
-      const targetUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSK0ubv5qcKK79RmLjRoxIW3WeQHxxKbiYW6ppnaa8FhAhPw/viewform?embedded=true';
+      const targetUrl = 'https://tamarind05.github.io/auto-quotation/';
       const iframe = document.getElementById('form-iframe');
       if (iframe && iframe.src !== targetUrl) iframe.src = targetUrl;
       toggleModal('modal-form');
@@ -1050,7 +1050,7 @@
     </div>
   </div>
 
-  <!-- Google 表單 Modal -->
+  <!-- 行程預約系統 Modal -->
   <div id="modal-form" class="fixed inset-0 z-[130] hidden items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-form')"></div>
     <div class="bg-white w-full max-w-4xl h-[90vh] rounded-4xl relative z-10 overflow-hidden shadow-2xl flex flex-col">
@@ -1096,7 +1096,7 @@
     <img id="full-res-image" src="" class="max-w-full max-h-full rounded-lg shadow-2xl object-contain" alt="">
   </div>
 
-  <!-- 自動報價確認 & 系統 Modal（沿用連結） -->
+  <!-- 行程預約確認 & 系統 Modal（沿用連結） -->
   <!-- 立即預約確認彈窗 -->
   <div id="modal-book-confirm" class="fixed inset-0 z-[140] hidden items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal('modal-book-confirm')"></div>
